@@ -1,64 +1,30 @@
-import DutyTrackerPage from "./portal/DutyTrackerPage";
-import PortalPage from "./portal/PortalPage";
-import CalendarPage from "./portal/CalendarPage";
-import FeedbackInboxPage from "./portal/FeedbackInboxPage";
-import { useState } from "react";
-import { NavLink, Route, Routes, useLocation } from "react-router";
+import {
+  useEffect,
+  useState,
+} from "react";
+import {
+  NavLink,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router";
+
+import ScrollReveal from "./components/ScrollReveal";
 import { srcMembers } from "./data/srcMembers";
+import { supabase } from "./lib/supabase";
 import DutiesPage from "./DutiesPage";
+
 import { AuthProvider } from "./auth/AuthContext";
 import LoginPage from "./auth/LoginPage";
 import ProtectedRoute from "./auth/ProtectedRoute";
+
+import PortalPage from "./portal/PortalPage";
+import PortalAnnouncementsPage from "./portal/AnnouncementsPage";
+import CalendarPage from "./portal/CalendarPage";
+import DutyTrackerPage from "./portal/DutyTrackerPage";
+import FeedbackInboxPage from "./portal/FeedbackInboxPage";
+
 import "./App.css";
-
-const announcements = [
-  {
-    date: "19 Sep",
-    category: "Student Leadership",
-    title: "SRC priorities for the new academic year",
-    text: "See the key projects and priorities the Student Representative Council is working on.",
-  },
-  {
-    date: "18 Sep",
-    category: "Events",
-    title: "Upcoming school events",
-    text: "Stay updated with activities, competitions, meetings and student-led events.",
-  },
-  {
-    date: "16 Sep",
-    category: "Community",
-    title: "Welcome to WSR Connect",
-    text: "A central place for school news, student leadership, events, resources and community updates.",
-  },
-];
-
-const events = [
-  {
-    date: "24",
-    month: "SEP",
-    title: "SRC Meeting",
-    type: "Leadership",
-  },
-  {
-    date: "28",
-    month: "SEP",
-    title: "Student Activities Day",
-    type: "Community",
-  },
-  {
-    date: "03",
-    month: "OCT",
-    title: "House Event",
-    type: "School Event",
-  },
-];
-
-const priorities = [
-  "Improve student communication",
-  "Strengthen student leadership",
-  "Build better common-room projects",
-  "Create more student-led initiatives",
-];
 
 const srcCategories = [
   "House & Sports Leadership",
@@ -98,47 +64,122 @@ const feedbackMaxFileSize = 50 * 1024 * 1024;
 const feedbackMaxFiles = 10;
 
 function getSeniorMember(position: string) {
-  return srcMembers.find((member) => member.position === position);
+  return srcMembers.find(
+    (member) => member.position === position,
+  );
 }
 
-function Header() {
-  const [menuOpen, setMenuOpen] = useState(false);
+/* =========================================================
+   HEADER
+   ========================================================= */
 
-  const navItems = [
-    { label: "Home", to: "/" },
-    { label: "Announcements", to: "/announcements" },
-    { label: "Events", to: "/events" },
-    { label: "SRC", to: "/src" },
-    { label: "Duties", to: "/duties" },
-    { label: "Resources", to: "/resources" },
-    { label: "Feedback", to: "/feedback" },
+function Header() {
+  const location = useLocation();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [navbarProgress, setNavbarProgress] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+
+      const documentHeight =
+        document.documentElement.scrollHeight -
+        document.documentElement.clientHeight;
+
+      const progress =
+        documentHeight > 0
+          ? Math.min(
+              Math.max(scrollTop / documentHeight, 0),
+              1,
+            )
+          : 0;
+
+      setNavbarProgress(progress);
+      setScrollProgress(progress);
+    };
+
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  const navigation = [
+    { label: "Home", path: "/" },
+    { label: "Announcements", path: "/announcements" },
+    { label: "Events", path: "/events" },
+    { label: "SRC", path: "/src" },
+    { label: "Duties", path: "/duties" },
+    { label: "Resources", path: "/resources" },
+    { label: "Feedback", path: "/feedback" },
   ];
 
-  const closeMenu = () => setMenuOpen(false);
-
   return (
-    <header className="navbar">
-      <div className="nav-inner">
-        <NavLink className="brand" to="/" onClick={closeMenu}>
-          <div className="brand-mark">W</div>
+    <header
+  className={`navbar ${
+    location.pathname === "/"
+      ? "navbar-home"
+      : "navbar-inner-page"
+  }`}
+  style={
+    {
+      "--navbar-progress": navbarProgress,
+    } as React.CSSProperties
+  }
+>
+      <div
+        className="scroll-progress"
+        style={{
+          transform: `scaleX(${scrollProgress})`,
+        }}
+        aria-hidden="true"
+      />
 
-          <div>
-            <div className="brand-name">WSR Connect</div>
-            <div className="brand-subtitle">
-              GEMS Westminster School – RAK
-            </div>
-          </div>
+      <div className="navbar-inner">
+        <NavLink
+          to="/"
+          className="brand"
+          aria-label="WSR Connect home"
+        >
+          <span className="brand-mark">
+            WSR
+          </span>
+
+          <span>
+            <span className="brand-name">
+              WSR Connect
+            </span>
+
+            <span className="brand-subtitle">
+              GEMS Westminster School - RAK
+            </span>
+          </span>
         </NavLink>
 
-        <nav className="nav-links" aria-label="Primary navigation">
-          {navItems.map((item) => (
+        <nav
+          className="nav-links"
+          aria-label="Main navigation"
+        >
+          {navigation.map((item) => (
             <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              onClick={closeMenu}
+              key={item.path}
+              to={item.path}
+              end={item.path === "/"}
               className={({ isActive }) =>
-                isActive ? "nav-link active" : "nav-link"
+                `nav-link ${
+                  isActive ? "nav-link-active" : ""
+                }`
               }
             >
               {item.label}
@@ -148,66 +189,66 @@ function Header() {
 
         <div className="nav-actions">
           <NavLink
+            to="/portal"
             className="portal-button"
-            to="/login"
-            onClick={closeMenu}
           >
             SRC Login
+            <span aria-hidden="true">↗</span>
           </NavLink>
-
-          <button
-            className="mobile-menu-button"
-            type="button"
-            aria-expanded={menuOpen}
-            aria-controls="mobile-navigation"
-            aria-label={
-              menuOpen
-                ? "Close navigation menu"
-                : "Open navigation menu"
-            }
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <span aria-hidden="true">
-              {menuOpen ? "×" : "☰"}
-            </span>
-          </button>
         </div>
+
+        <button
+          type="button"
+          className="mobile-menu-button"
+          aria-label={
+            menuOpen
+              ? "Close navigation"
+              : "Open navigation"
+          }
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? "×" : "☰"}
+        </button>
       </div>
 
-      {menuOpen ? (
-        <nav
-          id="mobile-navigation"
-          className="mobile-nav"
-          aria-label="Mobile navigation"
-        >
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === "/"}
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                isActive
-                  ? "mobile-nav-link active"
-                  : "mobile-nav-link"
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-
+      <nav
+        className={`mobile-nav ${
+          menuOpen ? "mobile-nav-open" : ""
+        }`}
+        aria-label="Mobile navigation"
+      >
+        {navigation.map((item) => (
           <NavLink
-            to="/login"
-            onClick={closeMenu}
-            className="mobile-nav-link"
+            key={item.path}
+            to={item.path}
+            end={item.path === "/"}
+            className={({ isActive }) =>
+              `mobile-nav-link ${
+                isActive
+                  ? "mobile-nav-link-active"
+                  : ""
+              }`
+            }
           >
-            SRC Login
+            {item.label}
           </NavLink>
-        </nav>
-      ) : null}
+        ))}
+
+        <NavLink
+          to="/portal"
+          className="mobile-login-link"
+        >
+          SRC Login ↗
+        </NavLink>
+      </nav>
     </header>
   );
 }
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
 
 function Footer() {
   const location = useLocation();
@@ -219,15 +260,21 @@ function Footer() {
   return (
     <footer className="footer">
       <div>
-        <div className="brand-name">WSR Connect</div>
-        <p>GEMS Westminster School – RAK</p>
+        <div className="brand-name">
+          WSR Connect
+        </div>
+
+        <p>GEMS Westminster School - RAK</p>
       </div>
 
       <div className="footer-right">
         <span>School community platform</span>
 
         {!isPortalRoute && (
-          <NavLink className="portal-button" to="/portal">
+          <NavLink
+            className="portal-button"
+            to="/portal"
+          >
             School Portal →
           </NavLink>
         )}
@@ -235,6 +282,10 @@ function Footer() {
     </footer>
   );
 }
+
+/* =========================================================
+   PAGE HERO
+   ========================================================= */
 
 function PageHero({
   eyebrow,
@@ -249,291 +300,641 @@ function PageHero({
     <section className="page-hero">
       <div className="page-hero-inner">
         <span className="eyebrow">{eyebrow}</span>
+
         <h1>{title}</h1>
+
         <p>{description}</p>
       </div>
     </section>
   );
 }
 
+/* =========================================================
+   HOME PAGE
+   ========================================================= */
+
 function HomePage() {
   return (
-    <>
+    <main className="home-page">
+      {/* --------------------------------------------------
+          HERO
+      -------------------------------------------------- */}
       <section className="hero">
+        <div
+          className="hero-atmosphere"
+          aria-hidden="true"
+        >
+          <div className="hero-glow hero-glow-one" />
+          <div className="hero-glow hero-glow-two" />
+          <div className="hero-grid" />
+          <div className="hero-vignette" />
+        </div>
+
         <div className="hero-inner">
-          <div className="hero-copy">
-            <span className="eyebrow">THE WSR COMMUNITY HUB</span>
+          <div className="hero-topline">
+            <span>
+              GEMS WESTMINSTER SCHOOL — RAK
+            </span>
 
-            <h1>
-              One place for
-              <span> school life.</span>
-            </h1>
+            <span>2026 / 27</span>
+          </div>
 
-            <p>
-              WSR Connect brings together school updates, student
-              leadership, events, resources and community initiatives in one
-              place.
-            </p>
+          <div className="hero-main">
+            <div className="hero-copy">
+              <p className="hero-kicker">
+                THE DIGITAL HOME OF STUDENT LIFE
+              </p>
 
-            <div className="hero-actions">
-              <NavLink
-                className="primary-button"
-                to="/announcements"
-              >
-                Explore WSR Connect
-              </NavLink>
+              <h1 className="hero-title">
+                <span className="hero-title-line">
+                  WSR
+                </span>
 
-              <NavLink
-                className="secondary-button"
-                to="/src"
-              >
-                Student Leadership
-              </NavLink>
+                <span className="hero-title-line hero-title-accent">
+                  CONNECT
+                  <span className="hero-title-period">
+                    .
+                  </span>
+                </span>
+              </h1>
+
+              <p className="hero-description">
+                The digital home of student life at
+                Westminster School. Stay informed,
+                discover opportunities, meet the
+                people shaping our community, and
+                keep moving forward.
+              </p>
+
+              <div className="hero-actions">
+                <NavLink
+                  to="/announcements"
+                  className="button-primary"
+                >
+                  Explore WSR
+                  <span aria-hidden="true">
+                    ↗
+                  </span>
+                </NavLink>
+
+                <NavLink
+                  to="/src"
+                  className="button-secondary"
+                >
+                  Meet the SRC
+                </NavLink>
+              </div>
+            </div>
+
+            <div className="hero-side">
+              <div className="hero-side-line" />
+
+              <span className="hero-side-label">
+                STUDENT LIFE
+              </span>
+
+              <strong>
+                Connected.
+                <br />
+                Informed.
+                <br />
+                Involved.
+              </strong>
+
+              <div className="hero-side-number">
+                01
+              </div>
             </div>
           </div>
 
-          <div className="hero-card">
-            <div className="hero-card-top">
-              <span>THIS WEEK</span>
-              <span className="status-dot">● Live</span>
+          <div className="hero-bottom">
+            <div className="hero-scroll-indicator">
+              <span>
+                Scroll to explore
+              </span>
+
+              <span
+                className="hero-scroll-line"
+                aria-hidden="true"
+              />
             </div>
 
-            <div className="hero-card-title">
-              What’s happening at WSR
-            </div>
+            <div className="hero-location">
+              <span>
+                WSR CONNECT
+              </span>
 
-            {events.slice(0, 2).map((event) => (
-              <div
-                className="mini-event"
-                key={event.title}
-              >
-                <div className="mini-date">
-                  <strong>{event.date}</strong>
-                  <span>{event.month}</span>
+              <span>
+                STUDENT COMMUNITY PLATFORM
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --------------------------------------------------
+          INTRO
+      -------------------------------------------------- */}
+      <section className="intro-section">
+        <ScrollReveal className="section-wsr-reveal section-wsr-reveal-intro">
+          <div
+            className="section-wsr-mark"
+            aria-hidden="true"
+          >
+            WSR
+          </div>
+        </ScrollReveal>
+
+        <div className="page-container">
+          <ScrollReveal>
+            <div className="intro-grid">
+              <div className="intro-label">
+                <span>01</span>
+                <span>THE PLATFORM</span>
+              </div>
+
+              <div className="intro-content">
+                <p className="intro-small">
+                  WSR CONNECT
+                </p>
+
+                <h2>
+                  One school.
+                  <br />
+                  <em>
+                    Everything connected.
+                  </em>
+                </h2>
+
+                <p className="intro-description">
+                  WSR Connect brings the student
+                  experience together in one place —
+                  from the latest announcements and
+                  upcoming events to student
+                  leadership, opportunities and
+                  essential resources.
+                </p>
+
+                <div className="intro-meta">
+                  <span>ANNOUNCEMENTS</span>
+                  <span>EVENTS</span>
+                  <span>LEADERSHIP</span>
+                  <span>RESOURCES</span>
                 </div>
+              </div>
+
+              <div
+                className="intro-number"
+                aria-hidden="true"
+              >
+                <span>01</span>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* --------------------------------------------------
+          ANNOUNCEMENTS
+      -------------------------------------------------- */}
+      <section className="editorial-section">
+        <ScrollReveal className="section-wsr-reveal section-wsr-reveal-announcements">
+          <div
+            className="section-wsr-mark"
+            aria-hidden="true"
+          >
+            WSR
+          </div>
+        </ScrollReveal>
+
+        <div className="page-container">
+          <ScrollReveal>
+            <div className="editorial-header">
+              <div>
+                <p className="editorial-eyebrow">
+                  02 / WHAT'S HAPPENING
+                </p>
+
+                <h2>
+                  The school is
+                  <br />
+                  <span>
+                    always moving.
+                  </span>
+                </h2>
+              </div>
+
+              <NavLink
+                to="/announcements"
+                className="editorial-link"
+              >
+                View all announcements
+                <span>↗</span>
+              </NavLink>
+            </div>
+          </ScrollReveal>
+
+          <div className="editorial-grid">
+            <ScrollReveal delay={100}>
+              <NavLink
+                to="/announcements"
+                className="feature-story"
+              >
+                <div className="feature-story-background">
+                  <div className="feature-story-orb" />
+                </div>
+
+                <div className="feature-story-content">
+                  <span className="story-tag">
+                    FEATURED
+                  </span>
+
+                  <h3>
+                    Stay connected to
+                    <br />
+                    what's happening.
+                  </h3>
+
+                  <p>
+                    Important updates, school
+                    news and opportunities in one
+                    place.
+                  </p>
+
+                  <span className="story-arrow">
+                    Explore announcements ↗
+                  </span>
+                </div>
+              </NavLink>
+            </ScrollReveal>
+
+            <div className="story-stack">
+              <ScrollReveal delay={180}>
+                <NavLink
+                  to="/announcements"
+                  className="story-item"
+                >
+                  <span className="story-number">
+                    01
+                  </span>
+
+                  <div>
+                    <span className="story-meta">
+                      LATEST UPDATE
+                    </span>
+
+                    <h3>
+                      Important school
+                      information
+                    </h3>
+                  </div>
+
+                  <span className="story-arrow-small">
+                    ↗
+                  </span>
+                </NavLink>
+              </ScrollReveal>
+
+              <ScrollReveal delay={240}>
+                <NavLink
+                  to="/announcements"
+                  className="story-item"
+                >
+                  <span className="story-number">
+                    02
+                  </span>
+
+                  <div>
+                    <span className="story-meta">
+                      COMMUNITY
+                    </span>
+
+                    <h3>
+                      What's happening
+                      around WSR
+                    </h3>
+                  </div>
+
+                  <span className="story-arrow-small">
+                    ↗
+                  </span>
+                </NavLink>
+              </ScrollReveal>
+
+              <ScrollReveal delay={300}>
+                <NavLink
+                  to="/announcements"
+                  className="story-item"
+                >
+                  <span className="story-number">
+                    03
+                  </span>
+
+                  <div>
+                    <span className="story-meta">
+                      OPPORTUNITY
+                    </span>
+
+                    <h3>
+                      Get involved
+                      with school life
+                    </h3>
+                  </div>
+
+                  <span className="story-arrow-small">
+                    ↗
+                  </span>
+                </NavLink>
+              </ScrollReveal>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --------------------------------------------------
+          SRC
+      -------------------------------------------------- */}
+      <section className="leadership-section">
+        <div className="leadership-background" />
+
+        <div className="page-container">
+          <ScrollReveal>
+            <div className="leadership-layout">
+              <div className="leadership-index">
+                03
+              </div>
+
+              <div className="leadership-copy">
+                <p className="leadership-eyebrow">
+                  STUDENT LEADERSHIP
+                </p>
+
+                <h2>
+                  The people
+                  <br />
+                  <span>
+                    behind WSR.
+                  </span>
+                </h2>
+
+                <p>
+                  The Student Representative Council
+                  exists to represent students,
+                  create opportunities and help shape
+                  the school community.
+                </p>
+
+                <NavLink
+                  to="/src"
+                  className="leadership-link"
+                >
+                  Meet the SRC
+                  <span>↗</span>
+                </NavLink>
+              </div>
+
+              <div className="leadership-visual">
+                <div className="leadership-orbit orbit-one" />
+                <div className="leadership-orbit orbit-two" />
+
+                <div className="leadership-monogram">
+                  SRC
+                </div>
+
+                <div className="leadership-caption">
+                  <span>
+                    STUDENT REPRESENTATIVE
+                    COUNCIL
+                  </span>
+
+                  <strong>
+                    2026 / 27
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+      </section>
+
+      {/* --------------------------------------------------
+     EVENTS
+-------------------------------------------------- */}
+<section className="events-section">
+  <ScrollReveal className="section-wsr-reveal">
+    <div
+      className="section-wsr-mark"
+      aria-hidden="true"
+    >
+      WSR
+    </div>
+  </ScrollReveal>
+
+  <div className="page-container">
+    <ScrollReveal>
+      <div className="events-heading">
+        <div>
+          <p className="editorial-eyebrow">
+            04 / EVENTS
+          </p>
+
+          <h2>
+            What's next?
+          </h2>
+        </div>
+
+        <NavLink
+          to="/events"
+          className="editorial-link"
+        >
+          View event calendar
+          <span>↗</span>
+        </NavLink>
+      </div>
+    </ScrollReveal>
+
+    <ScrollReveal delay={120}>
+      <div className="events-empty-state">
+        <div className="events-empty-index">
+          <span>EVENTS</span>
+          <strong>—</strong>
+        </div>
+
+        <div className="events-empty-content">
+          <span>WSR CALENDAR</span>
+
+          <h3>
+            Upcoming events will appear here.
+          </h3>
+
+          <p>
+            The public event calendar is now connected
+            to the school's central event system.
+          </p>
+        </div>
+
+        <NavLink
+          to="/events"
+          className="timeline-arrow"
+          aria-label="View events"
+        >
+          ↗
+        </NavLink>
+      </div>
+    </ScrollReveal>
+  </div>
+</section>
+      {/* --------------------------------------------------
+          RESOURCES
+      -------------------------------------------------- */}
+      <section className="resources-section">
+        <ScrollReveal className="section-wsr-reveal section-wsr-reveal-resources">
+          <div
+            className="section-wsr-mark"
+            aria-hidden="true"
+          >
+            WSR
+          </div>
+        </ScrollReveal>
+
+        <div className="page-container">
+          <ScrollReveal>
+            <div className="resources-header">
+              <div>
+                <p className="editorial-eyebrow">
+                  05 / RESOURCES
+                </p>
+
+                <h2>
+                  Everything you
+                  <br />
+                  <span>need.</span>
+                </h2>
+              </div>
+
+              <p>
+                Useful links and resources,
+                organised so you can get where
+                you need to go.
+              </p>
+            </div>
+          </ScrollReveal>
+
+          <div className="resources-grid">
+            <ScrollReveal delay={100}>
+              <NavLink
+                to="/resources"
+                className="resource-card resource-card-large"
+              >
+                <span>01</span>
 
                 <div>
-                  <strong>{event.title}</strong>
-                  <p>{event.type}</p>
-                </div>
-              </div>
-            ))}
+                  <small>
+                    ACADEMIC
+                  </small>
 
-            <div className="hero-card-footer">
-              <span>3 upcoming events</span>
-              <NavLink to="/events">View all →</NavLink>
-            </div>
+                  <h3>
+                    Academic resources
+                  </h3>
+                </div>
+
+                <strong>↗</strong>
+              </NavLink>
+            </ScrollReveal>
+
+            <ScrollReveal delay={160}>
+              <NavLink
+                to="/resources"
+                className="resource-card"
+              >
+                <span>02</span>
+
+                <div>
+                  <small>
+                    STUDENT LIFE
+                  </small>
+
+                  <h3>
+                    Student resources
+                  </h3>
+                </div>
+
+                <strong>↗</strong>
+              </NavLink>
+            </ScrollReveal>
+
+            <ScrollReveal delay={220}>
+              <NavLink
+                to="/resources"
+                className="resource-card"
+              >
+                <span>03</span>
+
+                <div>
+                  <small>
+                    INFORMATION
+                  </small>
+
+                  <h3>
+                    Useful information
+                  </h3>
+                </div>
+
+                <strong>↗</strong>
+              </NavLink>
+            </ScrollReveal>
           </div>
         </div>
       </section>
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">STAY INFORMED</span>
-            <h2>Latest announcements</h2>
-          </div>
+      {/* --------------------------------------------------
+          CLOSING CTA
+      -------------------------------------------------- */}
+      <section className="closing-section">
+        <div className="closing-glow" />
 
-          <NavLink
-            to="/announcements"
-            className="text-link"
+        <ScrollReveal className="section-wsr-reveal section-wsr-reveal-closing">
+          <div
+            className="section-wsr-mark"
+            aria-hidden="true"
           >
-            View all →
-          </NavLink>
-        </div>
+            WSR
+          </div>
+        </ScrollReveal>
 
-        <div className="announcement-grid">
-          {announcements.map((announcement) => (
-            <article
-              className="announcement-card"
-              key={announcement.title}
-            >
-              <div className="announcement-top">
-                <span>{announcement.category}</span>
-                <span>{announcement.date}</span>
-              </div>
+        <div className="page-container">
+          <ScrollReveal>
+            <div className="closing-content">
+              <p>
+                WSR CONNECT
+              </p>
 
-              <h3>{announcement.title}</h3>
-
-              <p>{announcement.text}</p>
+              <h2>
+                Stay
+                <br />
+                connected.
+              </h2>
 
               <NavLink
                 to="/announcements"
-                className="card-link"
+                className="button-primary"
               >
-                Read more →
+                Explore WSR
+                <span aria-hidden="true">
+                  ↗
+                </span>
               </NavLink>
-            </article>
-          ))}
+            </div>
+          </ScrollReveal>
         </div>
       </section>
-
-      <section className="section split-section">
-        <div className="feature-panel">
-          <span className="eyebrow">STUDENT LEADERSHIP</span>
-
-          <h2>The SRC workspace</h2>
-
-          <p>
-            A dedicated space for student leadership, projects, proposals,
-            responsibilities and school initiatives.
-          </p>
-
-          <div className="priority-list">
-            {priorities.map((priority, index) => (
-              <div
-                className="priority-item"
-                key={priority}
-              >
-                <span>0{index + 1}</span>
-                <strong>{priority}</strong>
-              </div>
-            ))}
-          </div>
-
-          <NavLink
-            className="primary-button small-button"
-            to="/src"
-          >
-            Explore SRC
-          </NavLink>
-        </div>
-
-        <div className="info-panel">
-          <div className="info-panel-header">
-            <span className="eyebrow">
-              WHY WSR CONNECT?
-            </span>
-            <span className="info-number">01</span>
-          </div>
-
-          <h3>Built around the WSR community.</h3>
-
-          <p>
-            The public side keeps everyone informed. The private School
-            Portal will later provide personalised tools for students,
-            teachers and school leadership.
-          </p>
-
-          <div className="info-stat-grid">
-            <div>
-              <strong>Public</strong>
-              <span>School information</span>
-            </div>
-
-            <div>
-              <strong>Private</strong>
-              <span>Personal tools</span>
-            </div>
-
-            <div>
-              <strong>Connected</strong>
-              <span>One platform</span>
-            </div>
-
-            <div>
-              <strong>Student-led</strong>
-              <span>Community initiatives</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">WHAT'S COMING UP</span>
-            <h2>Upcoming events</h2>
-          </div>
-
-          <NavLink
-            to="/events"
-            className="text-link"
-          >
-            Calendar →
-          </NavLink>
-        </div>
-
-        <div className="events-list">
-          {events.map((event) => (
-            <article
-              className="event-row"
-              key={event.title}
-            >
-              <div className="event-date">
-                <strong>{event.date}</strong>
-                <span>{event.month}</span>
-              </div>
-
-              <div className="event-main">
-                <span>{event.type}</span>
-                <h3>{event.title}</h3>
-              </div>
-
-              <NavLink
-                to="/events"
-                className="event-arrow"
-              >
-                →
-              </NavLink>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="section resource-section">
-        <div>
-          <span className="eyebrow">QUICK ACCESS</span>
-
-          <h2>Useful school resources</h2>
-
-          <p>
-            A central starting point for the information students and staff
-            use most often.
-          </p>
-        </div>
-
-        <div className="resource-grid">
-          <NavLink
-            to="/resources"
-            className="resource-card"
-          >
-            <span>01</span>
-            <strong>School Resources</strong>
-            <small>Documents and useful links</small>
-          </NavLink>
-
-          <NavLink
-            to="/src"
-            className="resource-card"
-          >
-            <span>02</span>
-            <strong>Student Leadership</strong>
-            <small>SRC information and initiatives</small>
-          </NavLink>
-
-          <NavLink
-            to="/duties"
-            className="resource-card"
-          >
-            <span>03</span>
-            <strong>Duties & Timetables</strong>
-            <small>SRC duty locations and schedules</small>
-          </NavLink>
-
-          <NavLink
-            to="/feedback"
-            className="resource-card"
-          >
-            <span>04</span>
-            <strong>Feedback</strong>
-            <small>Share an idea or suggestion</small>
-          </NavLink>
-        </div>
-      </section>
-    </>
+    </main>
   );
 }
+
+/* =========================================================
+   ANNOUNCEMENTS
+   ========================================================= */
 
 function AnnouncementsPage() {
   return (
@@ -546,32 +947,125 @@ function AnnouncementsPage() {
 
       <section className="section">
         <div className="announcement-page-grid">
-          {announcements.map((announcement) => (
-            <article
-              className="announcement-card"
-              key={announcement.title}
-            >
-              <div className="announcement-top">
-                <span>{announcement.category}</span>
-                <span>{announcement.date}</span>
-              </div>
+          <article className="announcement-card">
+            <div className="announcement-top">
+              <span>WSR CONNECT</span>
+              <span>—</span>
+            </div>
 
-              <h3>{announcement.title}</h3>
+            <h3>
+              No announcements published yet.
+            </h3>
 
-              <p>{announcement.text}</p>
+            <p>
+              Official school and student leadership
+              announcements will appear here when they
+              are published.
+            </p>
 
-              <span className="card-link">
-                Announcement
-              </span>
-            </article>
-          ))}
+            <span className="card-link">
+              WSR Announcements
+            </span>
+          </article>
         </div>
       </section>
     </>
   );
 }
 
+/* =========================================================
+   EVENTS
+   ========================================================= */
+
 function EventsPage() {
+  const [events, setEvents] = useState<
+    Array<{
+      id: string;
+      title: string;
+      description: string | null;
+      start_at: string;
+      end_at: string | null;
+      all_day: boolean;
+      location: string | null;
+      category: string;
+    }>
+  >([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadEvents() {
+      setLoading(true);
+      setError(null);
+
+      const { data, error: fetchError } = await supabase
+        .from("calendar_events")
+        .select(
+          "id, title, description, start_at, end_at, all_day, location, category",
+        )
+        .eq("visibility", "public")
+        .order("start_at", {
+          ascending: true,
+        });
+
+      if (cancelled) {
+        return;
+      }
+
+      if (fetchError) {
+        console.error(
+          "Failed to load public events:",
+          fetchError,
+        );
+        setError(
+          "Events could not be loaded right now.",
+        );
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+
+      setEvents(data ?? []);
+      setLoading(false);
+    }
+
+    void loadEvents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function formatEventDate(
+    startAt: string,
+    allDay: boolean,
+  ) {
+    const date = new Date(startAt);
+
+    if (allDay) {
+      return {
+        day: date.toLocaleDateString("en-GB", {
+          day: "2-digit",
+        }),
+        month: date.toLocaleDateString("en-GB", {
+          month: "short",
+        }).toUpperCase(),
+      };
+    }
+
+    return {
+      day: date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+      }),
+      month: date.toLocaleDateString("en-GB", {
+        month: "short",
+      }).toUpperCase(),
+    };
+  }
+
   return (
     <>
       <PageHero
@@ -581,28 +1075,70 @@ function EventsPage() {
       />
 
       <section className="section">
-        <div className="events-list">
-          {events.map((event) => (
-            <article
-              className="event-row event-row-static"
-              key={event.title}
-            >
-              <div className="event-date">
-                <strong>{event.date}</strong>
-                <span>{event.month}</span>
-              </div>
+        {loading ? (
+          <div className="events-list">
+            <p>Loading events...</p>
+          </div>
+        ) : error ? (
+          <div className="events-list">
+            <p>{error}</p>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="events-list">
+            <p>No public events are currently scheduled.</p>
+          </div>
+        ) : (
+          <div className="events-list">
+            {events.map((event) => {
+              const formattedDate = formatEventDate(
+                event.start_at,
+                event.all_day,
+              );
 
-              <div className="event-main">
-                <span>{event.type}</span>
-                <h3>{event.title}</h3>
-              </div>
-            </article>
-          ))}
-        </div>
+              return (
+                <article
+                  className="event-row"
+                  key={event.id}
+                >
+                  <div className="event-date">
+                    <strong>
+                      {formattedDate.day}
+                    </strong>
+                    <span>
+                      {formattedDate.month}
+                    </span>
+                  </div>
+
+                  <div className="event-main">
+                    <span>
+                      {event.category}
+                    </span>
+
+                    <h3>{event.title}</h3>
+
+                    {event.description && (
+                      <p>{event.description}</p>
+                    )}
+
+                    {event.location && (
+                      <small>
+                        {event.location}
+                      </small>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
     </>
   );
 }
+
+/* =========================================================
+   SRC
+   ========================================================= */
 
 function MemberCard({
   position,
@@ -638,7 +1174,9 @@ function SRCPage() {
   const seniorLeadership = seniorLeadershipOrder
     .map((position) => getSeniorMember(position))
     .filter(
-      (member): member is NonNullable<typeof member> =>
+      (
+        member,
+      ): member is NonNullable<typeof member> =>
         Boolean(member),
     );
 
@@ -653,7 +1191,10 @@ function SRCPage() {
       <section className="section src-intro">
         <div className="src-intro-card">
           <div>
-            <span className="eyebrow">WSR SRC</span>
+            <span className="eyebrow">
+              WSR SRC
+            </span>
+
             <h2>
               Meet the student leadership team.
             </h2>
@@ -669,6 +1210,7 @@ function SRCPage() {
               <strong>
                 {srcCategories.length + 1}
               </strong>
+
               <span>Leadership areas</span>
             </div>
           </div>
@@ -681,6 +1223,7 @@ function SRCPage() {
             <span className="eyebrow">
               HIGHEST LEADERSHIP
             </span>
+
             <h2>Senior Leadership</h2>
           </div>
 
@@ -689,32 +1232,26 @@ function SRCPage() {
           </span>
         </div>
 
-        <div
-          className="src-senior-leadership"
-          style={{
-            display: "grid",
-            gap: "14px",
-          }}
-        >
-          {[0, 1, 2].map((pairIndex) => {
+        <div className="src-senior-leadership">
+          {Array.from({
+            length: Math.ceil(
+              seniorLeadership.length / 2,
+            ),
+          }).map((_, pairIndex) => {
             const first =
               seniorLeadership[pairIndex * 2];
+
             const second =
               seniorLeadership[pairIndex * 2 + 1];
 
-            if (!first || !second) {
+            if (!first) {
               return null;
             }
 
             return (
               <div
-                key={`${first.position}-${second.position}`}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "repeat(2, minmax(0, 1fr))",
-                  gap: "14px",
-                }}
+                key={`${first.position}-${second?.position ?? "single"}`}
+                className="src-senior-row"
               >
                 <MemberCard
                   position={first.position}
@@ -722,11 +1259,13 @@ function SRCPage() {
                   grade={first.grade}
                 />
 
-                <MemberCard
-                  position={second.position}
-                  name={second.name}
-                  grade={second.grade}
-                />
+                {second && (
+                  <MemberCard
+                    position={second.position}
+                    name={second.name}
+                    grade={second.grade}
+                  />
+                )}
               </div>
             );
           })}
@@ -749,7 +1288,10 @@ function SRCPage() {
           >
             <div className="section-heading">
               <div>
-                <span className="eyebrow">SRC</span>
+                <span className="eyebrow">
+                  SRC
+                </span>
+
                 <h2>{category}</h2>
               </div>
 
@@ -784,9 +1326,11 @@ function SRCPage() {
           </h2>
 
           <p>
-            Public contact details are intentionally not displayed here.
-            School-approved contact channels can be added to the School Portal
-            once authentication and permissions are implemented.
+            Public contact details are intentionally
+            not displayed here. School-approved contact
+            channels can be added to the School Portal
+            once authentication and permissions are
+            implemented.
           </p>
 
           <NavLink
@@ -800,6 +1344,10 @@ function SRCPage() {
     </>
   );
 }
+
+/* =========================================================
+   RESOURCES
+   ========================================================= */
 
 function ResourcesPage() {
   const resources = [
@@ -839,8 +1387,12 @@ function ResourcesPage() {
               key={resource.title}
             >
               <span>{resource.number}</span>
+
               <strong>{resource.title}</strong>
-              <small>{resource.description}</small>
+
+              <small>
+                {resource.description}
+              </small>
             </article>
           ))}
         </div>
@@ -849,15 +1401,22 @@ function ResourcesPage() {
   );
 }
 
+/* =========================================================
+   FEEDBACK
+   ========================================================= */
+
 function FeedbackPage() {
   const [fullName, setFullName] = useState("");
-  const [gradeSection, setGradeSection] = useState("");
+  const [gradeSection, setGradeSection] =
+    useState("");
   const [email, setEmail] = useState("");
   const [category, setCategory] = useState("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+
   const [requestResponse, setRequestResponse] =
     useState(false);
+
   const [
     requestStaffInvolvement,
     setRequestStaffInvolvement,
@@ -868,8 +1427,10 @@ function FeedbackPage() {
 
   const [submitting, setSubmitting] =
     useState(false);
+
   const [submitted, setSubmitted] =
     useState(false);
+
   const [errorMessage, setErrorMessage] =
     useState("");
 
@@ -926,7 +1487,6 @@ function FeedbackPage() {
     }
 
     setAttachments(combinedFiles);
-
     event.target.value = "";
   };
 
@@ -1080,11 +1640,14 @@ function FeedbackPage() {
             PUBLIC FEEDBACK
           </span>
 
-          <h2>Tell us what could be better.</h2>
+          <h2>
+            Tell us what could be better.
+          </h2>
 
           <p>
-            Your feedback will be submitted to the WSR Connect feedback
-            system for review by the authorised student leadership team.
+            Your feedback will be submitted to the WSR
+            Connect feedback system for review by the
+            authorised student leadership team.
           </p>
 
           {submitted ? (
@@ -1102,8 +1665,9 @@ function FeedbackPage() {
                 </strong>
 
                 <p>
-                  Thank you. Your submission has been received and can now
-                  be reviewed by the authorised leadership team.
+                  Thank you. Your submission has been
+                  received and can now be reviewed by
+                  the authorised leadership team.
                 </p>
 
                 <button
@@ -1162,7 +1726,8 @@ function FeedbackPage() {
                 <span>Email Address</span>
 
                 <small>
-                  Optional. Provide this if you would like a response.
+                  Optional. Provide this if you would like
+                  a response.
                 </small>
 
                 <input
@@ -1177,7 +1742,9 @@ function FeedbackPage() {
               </label>
 
               <label>
-                <span>What is this about? *</span>
+                <span>
+                  What is this about? *
+                </span>
 
                 <select
                   value={category}
@@ -1270,8 +1837,8 @@ function FeedbackPage() {
                   </span>
 
                   <small>
-                    Optional. You can attach up to 10 files, with a
-                    maximum of 50 MB per file.
+                    Optional. You can attach up to 10 files,
+                    with a maximum of 50 MB per file.
                   </small>
                 </div>
 
@@ -1365,7 +1932,8 @@ function FeedbackPage() {
                     </strong>
 
                     <small>
-                      If selected, please provide an email address above.
+                      If selected, please provide an email
+                      address above.
                     </small>
                   </span>
                 </label>
@@ -1385,12 +1953,14 @@ function FeedbackPage() {
 
                   <span>
                     <strong>
-                      I would like a staff member to be involved.
+                      I would like a staff member to be
+                      involved.
                     </strong>
 
                     <small>
-                      Select this if you would like your concern to be
-                      referred for staff involvement.
+                      Select this if you would like your
+                      concern to be referred for staff
+                      involvement.
                     </small>
                   </span>
                 </label>
@@ -1400,16 +1970,20 @@ function FeedbackPage() {
                 <strong>Before you submit</strong>
 
                 <p>
-                  Please avoid sharing passwords, account credentials or
-                  other highly sensitive information. This feedback system
-                  is intended for school-community suggestions, concerns,
-                  reports and requests. Submissions are accessible only to
-                  authorised members of the WSR Connect leadership system.
+                  Please avoid sharing passwords, account
+                  credentials or other highly sensitive
+                  information. This feedback system is
+                  intended for school-community suggestions,
+                  concerns, reports and requests.
+                  Submissions are accessible only to
+                  authorised members of the WSR Connect
+                  leadership system.
                 </p>
 
                 <p>
-                  This notice is temporary and does not represent a
-                  school-approved privacy policy.
+                  This notice is temporary and does not
+                  represent a school-approved privacy
+                  policy.
                 </p>
               </div>
 
@@ -1439,6 +2013,10 @@ function FeedbackPage() {
   );
 }
 
+/* =========================================================
+   ERROR PAGES
+   ========================================================= */
+
 function NotFoundPage() {
   return (
     <section className="portal-page">
@@ -1448,7 +2026,8 @@ function NotFoundPage() {
         <h1>Page not found.</h1>
 
         <p>
-          The page you're looking for doesn't exist in WSR Connect.
+          The page you're looking for doesn't exist
+          in WSR Connect.
         </p>
 
         <NavLink
@@ -1473,8 +2052,8 @@ function PortalNotFoundPage() {
         <h1>Portal page not found.</h1>
 
         <p>
-          This leadership portal page doesn't exist yet or the address is
-          incorrect.
+          This leadership portal page doesn't exist yet
+          or the address is incorrect.
         </p>
 
         <NavLink
@@ -1487,6 +2066,10 @@ function PortalNotFoundPage() {
     </section>
   );
 }
+
+/* =========================================================
+   APP LAYOUT
+   ========================================================= */
 
 function Layout() {
   const location = useLocation();
@@ -1541,16 +2124,25 @@ function Layout() {
           />
 
           <Route
-            path="/portal"
-            element={
-              <ProtectedRoute requiredAccess="leadership">
-                <PortalPage />
-              </ProtectedRoute>
-            }
-          />
+  path="/portal"
+  element={
+    <ProtectedRoute requiredAccess="leadership">
+      <PortalPage />
+    </ProtectedRoute>
+  }
+/>
 
-          <Route
-            path="/portal/calendar"
+<Route
+  path="/portal/announcements"
+  element={
+    <ProtectedRoute requiredAccess="leadership">
+      <PortalAnnouncementsPage />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/portal/calendar"
             element={
               <ProtectedRoute requiredAccess="leadership">
                 <CalendarPage />
@@ -1609,6 +2201,10 @@ function Layout() {
     </div>
   );
 }
+
+/* =========================================================
+   APP
+   ========================================================= */
 
 export default function App() {
   return (
