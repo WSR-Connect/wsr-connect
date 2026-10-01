@@ -4,24 +4,28 @@ import "./DutyFinder.css";
 import {
   approvedVolunteers,
   breakPeriods,
+  corridorDutyAssignmentsByLocation,
   corridorDutyLocations,
   corridorDutyRole,
+  corridorDutyTimes,
   coverageInstructions,
-  dutyDataStatus,
   downstairsBreakDuties,
+  fridayCorridorTimes,
   fridayTransitionTimes,
   schoolDays,
+  transitionDutyAssignmentsByLocation,
   transitionDutyLocations,
   transitionDutyRole,
   transitionDutyTimes,
   upstairsBreakDuties,
   type BreakPeriod,
+  type DutyGender,
   type SchoolDay,
 } from "./data/duties";
 
 type DutySection = "breaks" | "transition" | "corridor";
 type BreakArea = "downstairs" | "upstairs";
-type Gender = "girls" | "boys";
+type Gender = DutyGender;
 
 const dayShortLabels: Record<SchoolDay, string> = {
   Monday: "MON",
@@ -101,8 +105,8 @@ function AssignmentList({
 
   return (
     <div className="assignment-list">
-      {people.map((person) => (
-        <span className="assignment-chip" key={person}>
+      {people.map((person, index) => (
+        <span className="assignment-chip" key={`${person}-${index}`}>
           {person}
         </span>
       ))}
@@ -244,10 +248,11 @@ function findBreakDuties(query: string): DutyFinderResult[] {
 
         const matchedPeople = Array.from(
           new Set(
-            days.flatMap((day) =>
-              post.assignments[day]?.filter((person) =>
-                normalizeSearch(person).includes(normalizedQuery),
-              ) ?? [],
+            days.flatMap(
+              (day) =>
+                post.assignments[day]?.filter((person) =>
+                  normalizeSearch(person).includes(normalizedQuery),
+                ) ?? [],
             ),
           ),
         );
@@ -357,7 +362,16 @@ function DutyFinder() {
   );
 }
 
-function ApprovedVolunteers() {
+function ApprovedVolunteers({
+  area,
+}: {
+  area: BreakArea;
+}) {
+  const instructions =
+    area === "downstairs"
+      ? coverageInstructions.downstairs
+      : coverageInstructions.upstairs;
+
   return (
     <section className="duty-support-section">
       <div className="duty-section-heading">
@@ -391,7 +405,7 @@ function ApprovedVolunteers() {
 
       <div className="coverage-note">
         <strong>Coverage procedure</strong>
-        <p>{coverageInstructions}</p>
+        <p>{instructions}</p>
       </div>
     </section>
   );
@@ -473,9 +487,18 @@ function BreakDuties() {
         </p>
       </div>
 
-      <ApprovedVolunteers />
+      <ApprovedVolunteers area={area} />
     </>
   );
+}
+
+function getTimetableData(
+  gender: Gender,
+  type: "transition" | "corridor",
+) {
+  return type === "transition"
+    ? transitionDutyAssignmentsByLocation[gender]
+    : corridorDutyAssignmentsByLocation[gender];
 }
 
 function TimetableGrid({
@@ -495,13 +518,15 @@ function TimetableGrid({
         ? fridayTransitionTimes
         : transitionDutyTimes
       : isFriday
-        ? fridayTransitionTimes
-        : transitionDutyTimes;
+        ? fridayCorridorTimes
+        : corridorDutyTimes;
 
   const locations =
     type === "transition"
       ? transitionDutyLocations
       : corridorDutyLocations;
+
+  const assignments = getTimetableData(gender, type);
 
   return (
     <div className="timetable-shell">
@@ -512,7 +537,7 @@ function TimetableGrid({
               <th>Duty Location</th>
 
               {slots.map((slot) => (
-                <th key={slot.label}>
+                <th key={`${slot.label}-${slot.time}`}>
                   <span>{slot.label}</span>
                   <small>{slot.time}</small>
                 </th>
@@ -521,43 +546,40 @@ function TimetableGrid({
           </thead>
 
           <tbody>
-            {locations.map((location) => (
-              <tr key={location}>
-                <td>
-                  <strong>{location}</strong>
+            {locations.map((location, locationIndex) => {
+              const dayAssignments =
+                assignments[locationIndex][selectedDay];
 
-                  <span className="gender-tag">
-                    {gender === "girls" ? "Girls" : "Boys"}
-                  </span>
-                </td>
+              return (
+                <tr key={`${location}-${locationIndex}`}>
+                  <td>
+                    <strong>{location}</strong>
 
-                {slots.map((slot) => (
-                  <td key={slot.label}>
-                    <span className="unassigned">Unassigned</span>
+                    <span className="gender-tag">
+                      {gender === "girls" ? "Girls" : "Boys"}
+                    </span>
                   </td>
-                ))}
-              </tr>
-            ))}
+
+                  {slots.map((slot, slotIndex) => {
+                    const person = dayAssignments[slotIndex];
+
+                    return (
+                      <td key={`${slot.label}-${slot.time}`}>
+                        {person ? (
+                          <span className="assignment-chip">
+                            {person}
+                          </span>
+                        ) : (
+                          <span className="unassigned">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-      </div>
-    </div>
-  );
-}
-
-function EmptyAssignmentNotice({
-  text,
-}: {
-  text: string;
-}) {
-  return (
-    <div className="assignment-notice">
-      <div className="notice-marker">!</div>
-
-      <div>
-        <strong>Assignments not published in the supplied sheet</strong>
-
-        <p>{text}</p>
       </div>
     </div>
   );
@@ -620,7 +642,9 @@ function TransitionDuties() {
         </div>
 
         <span className="schedule-count">
-          {day === "Friday" ? "Lessons 1–4" : "Lessons 1–7"}
+          {day === "Friday"
+            ? "Lesson 1 · Registration · Lessons 2–4"
+            : "Lesson 1 · Registration · Lessons 2–7"}
         </span>
       </div>
 
@@ -628,14 +652,6 @@ function TransitionDuties() {
         gender={gender}
         type="transition"
         selectedDay={day}
-      />
-
-      <EmptyAssignmentNotice
-        text={
-          gender === "girls"
-            ? dutyDataStatus.transition.girls
-            : dutyDataStatus.transition.boys
-        }
       />
 
       <section className="duty-guidance">
@@ -716,14 +732,6 @@ function CorridorDuties() {
         selectedDay={day}
       />
 
-      <EmptyAssignmentNotice
-        text={
-          gender === "girls"
-            ? dutyDataStatus.corridor.girls
-            : dutyDataStatus.corridor.boys
-        }
-      />
-
       <section className="duty-guidance">
         <span className="eyebrow">ROLE</span>
 
@@ -746,6 +754,11 @@ function PrintableBreakSchedule({
     area === "downstairs"
       ? downstairsBreakDuties[period]
       : upstairsBreakDuties[period];
+
+  const instructions =
+    area === "downstairs"
+      ? coverageInstructions.downstairs
+      : coverageInstructions.upstairs;
 
   return (
     <section className="print-section">
@@ -799,10 +812,8 @@ function PrintableBreakSchedule({
                 <td key={day}>
                   {post.assignments[day]?.length ? (
                     post.assignments[day]?.join(", ")
-                  ) : area === "downstairs" && day === "Friday" ? (
-                    "—"
                   ) : (
-                    "Unassigned"
+                    "—"
                   )}
                 </td>
               ))}
@@ -810,6 +821,11 @@ function PrintableBreakSchedule({
           ))}
         </tbody>
       </table>
+
+      <div className="print-procedure">
+        <strong>Coverage procedure</strong>
+        <p>{instructions}</p>
+      </div>
     </section>
   );
 }
@@ -818,17 +834,23 @@ function PrintableTimetable({
   title,
   type,
   daysLabel,
-  slots,
 }: {
   title: string;
   type: "transition" | "corridor";
   daysLabel: string;
-  slots: typeof transitionDutyTimes;
 }) {
   const locations =
     type === "transition"
       ? transitionDutyLocations
       : corridorDutyLocations;
+
+  const girlsAssignments = getTimetableData("girls", type);
+  const boysAssignments = getTimetableData("boys", type);
+
+  const days: SchoolDay[] =
+    daysLabel === "Friday"
+      ? ["Friday"]
+      : ["Monday", "Tuesday", "Wednesday", "Thursday"];
 
   return (
     <section className="print-section">
@@ -846,45 +868,76 @@ function PrintableTimetable({
         <span>{daysLabel}</span>
       </div>
 
-      <table className="print-table print-timetable">
-        <thead>
-          <tr>
-            <th>Duty group</th>
-            <th>Duty location</th>
+      {days.map((day) => {
+        const daySlots =
+          type === "transition"
+            ? day === "Friday"
+              ? fridayTransitionTimes
+              : transitionDutyTimes
+            : day === "Friday"
+              ? fridayCorridorTimes
+              : corridorDutyTimes;
 
-            {slots.map((slot) => (
-              <th key={slot.label}>
-                {slot.label}
-                <small>{slot.time}</small>
-              </th>
-            ))}
-          </tr>
-        </thead>
+        return (
+          <div
+            className="timetable-scroll"
+            key={day}
+          >
+            <table className="print-table print-timetable">
+              <thead>
+                <tr>
+                  <th>Duty group</th>
+                  <th>Duty location</th>
 
-        <tbody>
-          {(["Girls", "Boys"] as const).flatMap((group) =>
-            locations.map((location) => (
-              <tr key={`${group}-${location}`}>
-                <td>{group}</td>
+                  {daySlots.map((slot) => (
+                    <th key={`${day}-${slot.label}-${slot.time}`}>
+                      {slot.label}
+                      <small>{slot.time}</small>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-                <td>
-                  <strong>{location}</strong>
-                </td>
+              <tbody>
+                {locations.map((location, locationIndex) => {
+                  const groups = [
+                    {
+                      label: "Girls",
+                      values:
+                        girlsAssignments[locationIndex][day],
+                    },
+                    {
+                      label: "Boys",
+                      values:
+                        boysAssignments[locationIndex][day],
+                    },
+                  ] as const;
 
-                {slots.map((slot) => (
-                  <td key={slot.label}>Unassigned</td>
-                ))}
-              </tr>
-            )),
-          )}
-        </tbody>
-      </table>
+                  return groups.map((group) => (
+                    <tr
+                      key={`${day}-${group.label}-${location}-${locationIndex}`}
+                    >
+                      <td>{group.label}</td>
 
-      <div className="print-notice">
-        No student assignments were populated in the supplied spreadsheet
-        for this duty type. Slots are intentionally shown as{" "}
-        <strong>Unassigned</strong>.
-      </div>
+                      <td>
+                        <strong>{location}</strong>
+                      </td>
+
+                      {daySlots.map((slot, slotIndex) => (
+                        <td
+                          key={`${day}-${group.label}-${slot.label}-${slot.time}`}
+                        >
+                          {group.values[slotIndex] || "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  ));
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
     </section>
   );
 }
@@ -953,32 +1006,28 @@ function PrintableSchedule() {
         period="Break 2"
       />
 
-      <PrintableTimetable
+            <PrintableTimetable
         title="Transition timetable · Monday–Thursday"
         type="transition"
         daysLabel="Monday–Thursday"
-        slots={transitionDutyTimes}
       />
 
       <PrintableTimetable
         title="Transition timetable · Friday"
         type="transition"
         daysLabel="Friday"
-        slots={fridayTransitionTimes}
       />
 
       <PrintableTimetable
         title="Corridor timetable · Monday–Thursday"
         type="corridor"
         daysLabel="Monday–Thursday"
-        slots={transitionDutyTimes}
       />
 
       <PrintableTimetable
         title="Corridor timetable · Friday"
         type="corridor"
         daysLabel="Friday"
-        slots={fridayTransitionTimes}
       />
 
       <PrintableDutySection
@@ -998,8 +1047,13 @@ function PrintableSchedule() {
         </div>
 
         <div className="print-procedure">
-          <strong>Coverage procedure</strong>
-          <p>{coverageInstructions}</p>
+          <strong>Downstairs coverage procedure</strong>
+          <p>{coverageInstructions.downstairs}</p>
+        </div>
+
+        <div className="print-procedure">
+          <strong>Upstairs coverage procedure</strong>
+          <p>{coverageInstructions.upstairs}</p>
         </div>
       </PrintableDutySection>
 
