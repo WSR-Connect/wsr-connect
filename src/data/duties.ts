@@ -1106,3 +1106,61 @@ export const transitionDutyRole =
 
 export const corridorDutyRole =
   "Once you have completed transition duty, there will be a single desk in the middle of the old building corridor and another one in the middle of the new building corridor directly facing eachother. You may use that seat to carry on with your studies while on corridor duty. You must ensure that the corridor you are assigned to does not have any students loitering about, anyone outside of class has a hall pass. Make sure students are not taking too long or wasting time in the toilets. Ensure that there is a teacher present in every classroom with students and that nobody is sitting in an empty classroom alone or skipping their classes. The desks are strategically placed to allow the students on duty to monitor the corridor they are in as well as the middle corridor.";
+export type CorridorCoverDay =
+  | "Monday"
+  | "Tuesday"
+  | "Wednesday"
+  | "Thursday"
+  | "Friday";
+
+export const corridorCoverAvailability: Record<
+  CorridorCoverDay,
+  string[][]
+> = {
+  Monday: [
+    ["Mariam Hamadeh", "Sharlin Kaur", "Sarah George Sen", "Elena", "Siri Jagadish", "Mayan"],
+    ["Sharlin Kaur", "Safa", "Eshaal Khan", "Fatma Abdullah", "Elena", "Maryam Hassan", "Siri Jagadish"],
+    ["Sharlin Kaur", "Safa", "Eshaal Khan", "Fatma Abdullah", "Tiara Srour", "Elena", "Maryam Hassan", "Siri Jagadish"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Reema Ziad", "Devanshi", "Eshaal Khan", "Tiara Srour", "Aziza Mehrab Uddin", "Maryam Hassan", "Mayan"],
+    ["Mariam Hamadeh", "Sarah George Sen", "Devanshi", "Eshaal Khan", "Zimmal Atif", "Aziza Mehrab Uddin", "Maryam Hassan", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sharlin Kaur", "Devanshi", "Zenia Kamal", "Aaira Anwer", "Elena", "Reenoa", "Sarah Qasem", "Inaaya Anees", "Siri Jagadish", "Ayesha Abdul Khadar"],
+    ["Mariam Hamadeh", "Zenia Kamal", "Aaira Anwer", "Inaaya Anees", "Siri Jagadish", "Ayesha Abdul Khadar"],
+  ],
+
+  Tuesday: [
+    ["Sharlin Kaur", "Sarah George Sen", "Devanshi", "Tiara Srour", "Elena", "Siri Jagadish"],
+    ["Mariam Hamadeh", "Sarah George Sen", "Zimmal Atif", "Tiara Srour", "Aziza Mehrab Uddin", "Elena", "Nourin Elhossry", "Siri Jagadish", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Safa", "Sarah George Sen", "Reema Ziad", "Fatma Abdullah", "Aziza Mehrab Uddin", "Elena", "Reenoa", "Sarah Qasem", "Maryam Hassan", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Khalisa Syarifah Lubis", "Tiara Srour", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Khalisa Syarifah Lubis", "Tiara Srour", "Reenoa", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Safa", "Reema Ziad", "Eshaal Khan", "Fatma Abdullah", "Tiara Srour", "Elena", "Reenoa", "Maryam Hassan", "Siri Jagadish", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Safa", "Reema Ziad", "Zenia Kamal", "Eshaal Khan", "Aaira Anwer", "Fatma Abdullah", "Tiara Srour", "Elena", "Maryam Hassan", "Inaaya Anees", "Siri Jagadish", "Ayesha Abdul Khadar"],
+  ],
+
+  Wednesday: [
+    ["Mariam Hamadeh", "Sharlin Kaur", "Sarah George Sen", "Elena", "Siri Jagadish", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Khalisa Syarifah Lubis", "Safa", "Fatma Abdullah", "Elena", "Maryam Hassan", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Khalisa Syarifah Lubis", "Safa", "Fatma Abdullah", "Elena", "Reenoa", "Maryam Hassan", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sarah George Sen", "Devanshi", "Eshaal Khan", "Zimmal Atif", "Reenoa", "Maryam Hassan", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sarah George Sen", "Devanshi", "Eshaal Khan", "Zimmal Atif", "Aziza Mehrab Uddin", "Reenoa", "Sarah Qasem", "Maryam Hassan", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Reema Ziad", "Zenia Kamal", "Aaira Anwer", "Reenoa", "Sarah Qasem", "Inaaya Anees", "Ayesha Abdul Khadar"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Reema Ziad", "Zenia Kamal", "Aaira Anwer", "Inaaya Anees", "Ayesha Abdul Khadar"],
+  ],
+
+  Thursday: [
+    ["Mariam Hamadeh", "Sharlin Kaur", "Sarah George Sen", "Elena", "Siri Jagadish", "Mayan"],
+    ["Mariam Hamadeh", "Sarah George Sen", "Devanshi", "Eshaal Khan", "Tiara Srour", "Maryam Hassan", "Nourin Elhossry", "Mayan"],
+    ["Devanshi", "Eshaal Khan", "Reenoa", "Sarah Qasem", "Maryam Hassan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Khalisa Syarifah Lubis", "Safa", "Fatma Abdullah", "Elena", "Maryam Hassan", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Khalisa Syarifah Lubis", "Safa", "Fatma Abdullah", "Elena", "Reenoa", "Maryam Hassan", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Reema Ziad", "Zenia Kamal", "Aaira Anwer", "Tiara Srour", "Reenoa", "Inaaya Anees", "Ayesha Abdul Khadar"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Sharlin Kaur", "Reema Ziad", "Zenia Kamal", "Tiara Srour", "Mayan"],
+  ],
+
+  Friday: [
+    ["Mariam Hamadeh", "Sharlin Kaur", "Sarah George Sen", "Zimmal Atif", "Tiara Srour", "Elena", "Reenoa", "Sarah Qasem", "Nourin Elhossry", "Mayan"],
+    ["Mariam Hamadeh", "Sara Abutalib", "Safa", "Reema Ziad", "Fatma Abdullah", "Tiara Srour", "Elena", "Maryam Hassan", "Mayan"],
+    ["Sharlin Kaur", "Safa", "Eshaal Khan", "Tiara Srour", "Elena", "Maryam Hassan", "Siri Jagadish", "Mayan"],
+    ["Sharlin Kaur", "Safa", "Eshaal Khan", "Tiara Srour", "Elena", "Maryam Hassan", "Siri Jagadish", "Mayan"],
+  ],
+};

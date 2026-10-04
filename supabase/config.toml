@@ -1,0 +1,6 @@
+project_id = "kulmkrqoadsoaocuovpe"
+
+[functions.runtime-test]
+# This function verifies Firebase ID tokens itself. Supabase's gateway must
+# not reject those tokens before the function can validate them.
+verify_jwt = false

@@ -6,6 +6,10 @@ import {
 } from "react";
 import { NavLink } from "react-router";
 import { useAuth } from "../auth/AuthContext";
+import {
+  corridorCoverAvailability,
+  type CorridorCoverDay,
+} from "../data/duties";
 
 const FUNCTION_URL =
   "https://kulmkrqoadsoaocuovpe.supabase.co/functions/v1/runtime-test";
@@ -24,7 +28,7 @@ interface Duty {
   start_time: string;
   end_time: string | null;
   location: string;
-  assigned_to: string;
+  assigned_to: string | null;
   assigned_name: string | null;
   status: DutyStatus;
   completed_at: string | null;
@@ -33,6 +37,53 @@ interface Duty {
   covered_by_uid: string | null;
   covered_at: string | null;
   notes: string | null;
+}
+
+interface ApiDuty {
+  id: string;
+  rota_id: string;
+  duty_date: string;
+  title?: string;
+  duty_name?: string;
+  start_time: string;
+  end_time: string | null;
+  location: string;
+  assigned_to: string | null;
+  assigned_name?: string | null;
+  status: DutyStatus;
+  completed_at?: string | null;
+  completed_by?: string | null;
+  covered_by_name?: string | null;
+  covered_by_uid?: string | null;
+  covered_at?: string | null;
+  notes?: string | null;
+  cover?: {
+    covered_by?: string;
+    recorded_at?: string;
+  } | null;
+}
+
+function normalizeDuty(apiDuty: ApiDuty): Duty {
+  return {
+    id: apiDuty.id,
+    rota_id: apiDuty.rota_id,
+    duty_date: apiDuty.duty_date,
+    title: apiDuty.title ?? apiDuty.duty_name ?? "Duty",
+    start_time: apiDuty.start_time,
+    end_time: apiDuty.end_time ?? null,
+    location: apiDuty.location,
+    assigned_to: apiDuty.assigned_to,
+    assigned_name: apiDuty.assigned_name ?? null,
+    status: apiDuty.status,
+    completed_at: apiDuty.completed_at ?? null,
+    completed_by: apiDuty.completed_by ?? null,
+    covered_by_name:
+      apiDuty.covered_by_name ?? apiDuty.cover?.covered_by ?? null,
+    covered_by_uid: apiDuty.covered_by_uid ?? null,
+    covered_at:
+      apiDuty.covered_at ?? apiDuty.cover?.recorded_at ?? null,
+    notes: apiDuty.notes ?? null,
+  };
 }
 
 interface DutyResponse {
@@ -51,8 +102,7 @@ function formatTime(time: string | null) {
     return "—";
   }
 
-  const [hourString, minuteString] =
-    time.split(":");
+  const [hourString, minuteString] = time.split(":");
 
   const hour = Number(hourString);
   const minute = Number(minuteString);
@@ -145,8 +195,64 @@ function getStatusStyle(status: DutyStatus) {
   }
 }
 
+function getCorridorCoverCandidates(
+  selectedDate: string,
+  duty: Duty,
+) {
+  const isCorridorDuty =
+    duty.title
+      .toLowerCase()
+      .includes("corridor") ||
+    duty.location
+      .toLowerCase()
+      .includes("corridor");
+
+  if (!isCorridorDuty) {
+    return [];
+  }
+
+  const weekday = new Date(
+    `${selectedDate}T12:00:00`,
+  ).toLocaleDateString("en-US", {
+    weekday: "long",
+  }) as CorridorCoverDay;
+
+  const lessonMatch = duty.title.match(
+  /Lesson\s*([1-7])/i,
+);
+
+  const lessonNumber = lessonMatch
+    ? Number(lessonMatch[1])
+    : null;
+
+  if (!lessonNumber) {
+    return [];
+  }
+
+  return (
+    corridorCoverAvailability[weekday]?.[
+      lessonNumber - 1
+    ] ?? []
+  );
+}
+
 export default function DutyTrackerPage() {
-  const { user } = useAuth();
+  const {
+    user,
+    isSRC,
+    isLeadership,
+    position,
+  } = useAuth();
+
+  const canViewAll =
+    isSRC &&
+    isLeadership &&
+    [
+      "head_boy",
+      "head_girl",
+      "assistant_head_boy",
+      "assistant_head_girl",
+    ].includes(position ?? "");
 
   const [selectedDate, setSelectedDate] =
     useState(getTodayString);
@@ -167,11 +273,17 @@ export default function DutyTrackerPage() {
   const [actionId, setActionId] =
     useState<string | null>(null);
 
-  const [coverInputs, setCoverInputs] =
-    useState<Record<string, string>>({});
+  const [
+    selectedCoverCandidates,
+    setSelectedCoverCandidates,
+  ] = useState<Record<string, string>>({});
 
   const [showAll, setShowAll] =
-    useState(true);
+    useState(canViewAll);
+
+  useEffect(() => {
+    setShowAll(canViewAll);
+  }, [canViewAll]);
 
   const loadDuties = useCallback(async () => {
     if (!user) {
@@ -186,9 +298,8 @@ export default function DutyTrackerPage() {
         await user.getIdToken();
 
       const params = new URLSearchParams({
-        resource: "duties",
+        resource: showAll ? "duty-overview" : "duties",
         date: selectedDate,
-        scope: showAll ? "all" : "mine",
       });
 
       const response = await fetch(
@@ -211,11 +322,11 @@ export default function DutyTrackerPage() {
         );
       }
 
-      setDuties(
+      const apiDuties: ApiDuty[] =
         Array.isArray(data?.duties)
           ? data.duties
-          : [],
-      );
+          : [];
+      setDuties(apiDuties.map(normalizeDuty));
 
       setSummary(data?.summary);
     } catch (loadError) {
@@ -316,11 +427,11 @@ export default function DutyTrackerPage() {
     }
 
     const name =
-      coverInputs[duty.id]?.trim();
+      selectedCoverCandidates[duty.id]?.trim();
 
     if (!name) {
       setError(
-        "Enter the name of the person covering the duty.",
+        "Select the person covering the duty.",
       );
       return;
     }
@@ -342,7 +453,7 @@ export default function DutyTrackerPage() {
           },
           body: JSON.stringify({
             id: duty.id,
-            covered_by_name: name,
+            covered_by: name,
           }),
         },
       );
@@ -357,15 +468,17 @@ export default function DutyTrackerPage() {
         );
       }
 
-      setCoverInputs((current) => {
-        const next = {
-          ...current,
-        };
+      setSelectedCoverCandidates(
+        (current) => {
+          const next = {
+            ...current,
+          };
 
-        delete next[duty.id];
+          delete next[duty.id];
 
-        return next;
-      });
+          return next;
+        },
+      );
 
       await loadDuties();
     } catch (actionError) {
@@ -696,28 +809,30 @@ export default function DutyTrackerPage() {
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              setShowAll(
-                (current) => !current,
-              )
-            }
-            style={{
-              padding: "10px 14px",
-              border:
-                "1px solid #D9DDE1",
-              background: "#FFFFFF",
-              color: "#333333",
-              font: "inherit",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            {showAll
-              ? "Show my duties"
-              : "Show all duties"}
-          </button>
+          {canViewAll && (
+            <button
+              type="button"
+              onClick={() =>
+                setShowAll(
+                  (current) => !current,
+                )
+              }
+              style={{
+                padding: "10px 14px",
+                border:
+                  "1px solid #D9DDE1",
+                background: "#FFFFFF",
+                color: "#333333",
+                font: "inherit",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {showAll
+                ? "Show my duties"
+                : "Show all duties"}
+            </button>
+          )}
         </section>
 
         {error && (
@@ -794,6 +909,17 @@ export default function DutyTrackerPage() {
 
               const isActionRunning =
                 actionId === duty.id;
+
+              const coverCandidates =
+                getCorridorCoverCandidates(
+                  selectedDate,
+                  duty,
+                );
+
+              const selectedCandidate =
+                selectedCoverCandidates[
+                  duty.id
+                ] ?? "";
 
               return (
                 <article
@@ -963,7 +1089,8 @@ export default function DutyTrackerPage() {
                         </p>
                       )}
 
-                      {duty.status ===
+                      {canViewAll &&
+                        duty.status ===
                         "covered" &&
                         duty.covered_by_name && (
                           <div
@@ -1036,31 +1163,24 @@ export default function DutyTrackerPage() {
                                 "wrap",
                             }}
                           >
-                            <input
-                              type="text"
+                            <select
                               value={
-                                coverInputs[
-                                  duty.id
-                                ] ?? ""
+                                selectedCandidate
                               }
-                              onChange={(
-                                event,
-                              ) =>
-                                setCoverInputs(
-                                  (
-                                    current,
-                                  ) => ({
+                              onChange={(event) =>
+                                setSelectedCoverCandidates(
+                                  (current) => ({
                                     ...current,
                                     [duty.id]:
-                                      event
-                                        .target
+                                      event.target
                                         .value,
                                   }),
                                 )
                               }
-                              placeholder="Name of person covering"
                               disabled={
-                                isActionRunning
+                                isActionRunning ||
+                                coverCandidates.length ===
+                                  0
                               }
                               style={{
                                 flex:
@@ -1078,7 +1198,31 @@ export default function DutyTrackerPage() {
                                 font:
                                   "inherit",
                               }}
-                            />
+                            >
+                              <option value="">
+                                {coverCandidates.length >
+                                0
+                                  ? "Select cover person"
+                                  : "No cover list available"}
+                              </option>
+
+                              {coverCandidates.map(
+                                (
+                                  candidate,
+                                ) => (
+                                  <option
+                                    key={
+                                      candidate
+                                    }
+                                    value={
+                                      candidate
+                                    }
+                                  >
+                                    {candidate}
+                                  </option>
+                                ),
+                              )}
+                            </select>
 
                             <button
                               type="button"
@@ -1088,7 +1232,8 @@ export default function DutyTrackerPage() {
                                 )
                               }
                               disabled={
-                                isActionRunning
+                                isActionRunning ||
+                                !selectedCandidate
                               }
                               style={{
                                 padding:
@@ -1104,25 +1249,37 @@ export default function DutyTrackerPage() {
                                 fontWeight:
                                   700,
                                 cursor:
-                                  "pointer",
+                                  isActionRunning ||
+                                  !selectedCandidate
+                                    ? "not-allowed"
+                                    : "pointer",
+                                opacity:
+                                  isActionRunning ||
+                                  !selectedCandidate
+                                    ? 0.55
+                                    : 1,
                               }}
                             >
                               Record cover
                             </button>
+
+                            <span
+                              style={{
+                                color:
+                                  "#A0A4A8",
+                                fontSize:
+                                  "12px",
+                                alignSelf:
+                                  "center",
+                              }}
+                            >
+                              {isActionRunning
+                                ? "Saving..."
+                                : ""}
+                            </span>
                           </div>
                         )}
                     </div>
-
-                    <span
-                      style={{
-                        color: "#A0A4A8",
-                        fontSize: "12px",
-                      }}
-                    >
-                      {isActionRunning
-                        ? "Saving..."
-                        : ""}
-                    </span>
                   </div>
                 </article>
               );
