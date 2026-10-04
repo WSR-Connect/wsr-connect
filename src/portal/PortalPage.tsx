@@ -42,60 +42,22 @@ function SectionCard({
   return (
     <NavLink
       to={to}
-      style={{
-        display: "block",
-        padding: "24px",
-        border: "1px solid #D9DDE1",
-        background: "#FFFFFF",
-        color: "#111111",
-        textDecoration: "none",
-      }}
+      className="portal-tool-card"
     >
-      <span
-        style={{
-          display: "block",
-          marginBottom: "8px",
-          color: "#1E5AA8",
-          fontSize: "12px",
-          fontWeight: 700,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-        }}
-      >
+      <span className="portal-tool-eyebrow">
         {eyebrow}
       </span>
 
-      <h3
-        style={{
-          margin: "0 0 8px",
-          fontSize: "20px",
-          lineHeight: 1.3,
-        }}
-      >
+      <h3 className="portal-tool-title">
         {title}
       </h3>
 
-      <p
-        style={{
-          margin: 0,
-          color: "#73777C",
-          lineHeight: 1.6,
-          fontSize: "14px",
-        }}
-      >
+      <p className="portal-tool-description">
         {description}
       </p>
 
-      <span
-        style={{
-          display: "inline-block",
-          marginTop: "18px",
-          color: "#1E5AA8",
-          fontSize: "14px",
-          fontWeight: 700,
-        }}
-      >
-        Open →
+      <span className="portal-tool-action">
+        Open tool <span aria-hidden="true">↗</span>
       </span>
     </NavLink>
   );
@@ -252,160 +214,12 @@ export default function PortalPage() {
 
         <section
           style={{
-            marginTop: "24px",
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "16px",
-          }}
-        >
-          <article
-            style={{
-              padding: "24px",
-              border:
-                "1px solid #D9DDE1",
-              background: "#FFFFFF",
-            }}
-          >
-            <span
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                color: "#1E5AA8",
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Current week
-            </span>
-
-            <h2
-              style={{
-                margin: "0 0 8px",
-                fontSize: "22px",
-              }}
-            >
-              No weekly priorities
-              yet
-            </h2>
-
-            <p
-              style={{
-                margin: 0,
-                color: "#73777C",
-                lineHeight: 1.6,
-                fontSize: "14px",
-              }}
-            >
-              The current week's detailed
-              priorities will appear here
-              once the leadership team
-              publishes them.
-            </p>
-          </article>
-
-          <article
-            style={{
-              padding: "24px",
-              border:
-                "1px solid #D9DDE1",
-              background: "#FFFFFF",
-            }}
-          >
-            <span
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                color: "#1E5AA8",
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Upcoming
-            </span>
-
-            <h2
-              style={{
-                margin: "0 0 8px",
-                fontSize: "22px",
-              }}
-            >
-              No meetings recorded
-            </h2>
-
-            <p
-              style={{
-                margin: 0,
-                color: "#73777C",
-                lineHeight: 1.6,
-                fontSize: "14px",
-              }}
-            >
-              Leadership meetings and
-              important upcoming events
-              will appear here.
-            </p>
-          </article>
-
-          <article
-            style={{
-              padding: "24px",
-              border:
-                "1px solid #D9DDE1",
-              background: "#FFFFFF",
-            }}
-          >
-            <span
-              style={{
-                display: "block",
-                marginBottom: "8px",
-                color: "#1E5AA8",
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Recent
-            </span>
-
-            <h2
-              style={{
-                margin: "0 0 8px",
-                fontSize: "22px",
-              }}
-            >
-              No progress reports
-              yet
-            </h2>
-
-            <p
-              style={{
-                margin: 0,
-                color: "#73777C",
-                lineHeight: 1.6,
-                fontSize: "14px",
-              }}
-            >
-              Completed weekly reports will
-              appear here as the year
-              progresses.
-            </p>
-          </article>
-        </section>
-
-        <section
-          style={{
-            marginTop: "48px",
+            marginTop: "32px",
           }}
         >
           <div
             style={{
-              marginBottom: "18px",
+              marginBottom: "20px",
             }}
           >
             <span
@@ -428,8 +242,20 @@ export default function PortalPage() {
                 fontSize: "28px",
               }}
             >
-              Quick access
+              Tools you can use now
             </h2>
+
+            <p
+              style={{
+                margin: "8px 0 0",
+                color: "#73777C",
+                fontSize: "14px",
+                lineHeight: 1.6,
+              }}
+            >
+              Open a tool below to coordinate duties, events,
+              announcements, or student feedback.
+            </p>
           </div>
 
           <div
@@ -448,17 +274,10 @@ export default function PortalPage() {
             />
 
             <SectionCard
-              eyebrow="Planning"
-              title="Weekly Priorities"
-              description="Review the detailed priorities and targets for the current and previous weeks."
-              to="/portal/priorities"
-            />
-
-            <SectionCard
-              eyebrow="Coordination"
-              title="Meetings"
-              description="Keep track of leadership, SLT and other important meetings."
-              to="/portal/meetings"
+              eyebrow="Communication"
+              title="Announcements"
+              description="Draft and publish school or SRC updates, and review what has already been shared."
+              to="/portal/announcements"
             />
 
             <SectionCard
@@ -466,13 +285,6 @@ export default function PortalPage() {
               title="Calendar"
               description="View and manage important school, SRC, meeting and leadership events."
               to="/portal/calendar"
-            />
-
-            <SectionCard
-              eyebrow="Review"
-              title="Progress Reports"
-              description="Review the weekly reports documenting progress, outcomes and follow-up actions."
-              to="/portal/reports"
             />
 
             <SectionCard

@@ -7,6 +7,7 @@ export default function LoginPage() {
   const {
     signIn,
     user,
+    isSRC,
     isLeadership,
     loading,
   } = useAuth();
@@ -22,6 +23,8 @@ export default function LoginPage() {
     if (!loading && user) {
       if (isLeadership) {
         navigate("/portal", { replace: true });
+      } else if (isSRC) {
+        navigate("/duties", { replace: true });
       } else {
         navigate("/", { replace: true });
       }
@@ -29,6 +32,7 @@ export default function LoginPage() {
   }, [
     loading,
     user,
+    isSRC,
     isLeadership,
     navigate,
   ]);
@@ -92,7 +96,7 @@ export default function LoginPage() {
             fontSize: "28px",
           }}
         >
-          Leadership Login
+          SRC & Leadership Login
         </h1>
 
         <p
@@ -102,7 +106,9 @@ export default function LoginPage() {
             lineHeight: 1.6,
           }}
         >
-          Sign in to access the SRC leadership portal.
+          Sign in with the account provided by your SRC leader. SRC
+          members go to their duty tracker; senior leaders go to the
+          leadership workspace.
         </p>
 
         <form onSubmit={handleSubmit}>
