@@ -2093,6 +2093,138 @@ function PortalNotFoundPage() {
 function Layout() {
   const location = useLocation();
 
+  useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    window.scrollTo({
+      top: 0,
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const canHover = window.matchMedia(
+      "(hover: hover) and (pointer: fine)",
+    ).matches;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (!canHover || reduceMotion) {
+      return;
+    }
+
+    const surfaceSelector = [
+      ".announcement-card",
+      ".calendar-card",
+      ".feedback-panel",
+      ".portal-tool-card",
+      ".resource-card",
+      ".resource-page-card",
+      ".rota-manager__rota",
+      ".src-member-card",
+      ".src-member-home__panel",
+      ".src-member-home__tool",
+    ].join(",");
+
+    let frame = 0;
+    let latestEvent: PointerEvent | null = null;
+    let activeSurface: HTMLElement | null = null;
+
+    const resetSurface = () => {
+      activeSurface?.removeAttribute("data-premium-pointer");
+      activeSurface?.style.removeProperty("--surface-x");
+      activeSurface?.style.removeProperty("--surface-y");
+      activeSurface?.style.removeProperty("--surface-tilt-x");
+      activeSurface?.style.removeProperty("--surface-tilt-y");
+      activeSurface = null;
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      latestEvent = event;
+
+      if (frame) {
+        return;
+      }
+
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        const pointerEvent = latestEvent;
+        latestEvent = null;
+
+        if (!pointerEvent) {
+          return;
+        }
+
+        const pointerX = pointerEvent.clientX / window.innerWidth;
+        const pointerY = pointerEvent.clientY / window.innerHeight;
+        document.documentElement.style.setProperty(
+          "--pointer-x",
+          `${Math.round(pointerX * 100)}%`,
+        );
+        document.documentElement.style.setProperty(
+          "--pointer-y",
+          `${Math.round(pointerY * 100)}%`,
+        );
+
+        const eventTarget = pointerEvent.target;
+        const surface =
+          eventTarget instanceof Element
+            ? eventTarget.closest<HTMLElement>(surfaceSelector)
+            : null;
+
+        if (activeSurface !== surface) {
+          resetSurface();
+          activeSurface = surface;
+        }
+
+        if (!surface) {
+          return;
+        }
+
+        const bounds = surface.getBoundingClientRect();
+        const x = Math.max(
+          0,
+          Math.min(100, ((pointerEvent.clientX - bounds.left) / bounds.width) * 100),
+        );
+        const y = Math.max(
+          0,
+          Math.min(100, ((pointerEvent.clientY - bounds.top) / bounds.height) * 100),
+        );
+
+        surface.dataset.premiumPointer = "true";
+        surface.style.setProperty("--surface-x", `${x}%`);
+        surface.style.setProperty("--surface-y", `${y}%`);
+        surface.style.setProperty(
+          "--surface-tilt-x",
+          `${((x - 50) / 50) * 2}deg`,
+        );
+        surface.style.setProperty(
+          "--surface-tilt-y",
+          `${((50 - y) / 50) * 2}deg`,
+        );
+      });
+    };
+
+    document.addEventListener("pointermove", handlePointerMove, {
+      passive: true,
+    });
+    document.addEventListener("pointerleave", resetSurface);
+    window.addEventListener("blur", resetSurface);
+
+    return () => {
+      document.removeEventListener("pointermove", handlePointerMove);
+      document.removeEventListener("pointerleave", resetSurface);
+      window.removeEventListener("blur", resetSurface);
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
+      resetSurface();
+    };
+  }, []);
+
   const isPortalRoute =
     location.pathname === "/portal" ||
     location.pathname.startsWith("/portal/");
@@ -2101,7 +2233,10 @@ function Layout() {
     <div className="app">
       <Header />
 
-      <main>
+      <main
+        className="route-stage"
+        key={location.pathname}
+      >
         <Routes>
           <Route
             path="/"

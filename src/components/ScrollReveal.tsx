@@ -23,6 +23,18 @@ export default function ScrollReveal({
       return;
     }
 
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+
+    if (
+      prefersReducedMotion ||
+      typeof IntersectionObserver === "undefined"
+    ) {
+      setIsVisible(true);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
