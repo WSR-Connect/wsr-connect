@@ -607,7 +607,9 @@ export default function DutyTrackerPage() {
                   opacity: 0.72,
                 }}
               >
-                Leadership workspace
+                {isLeadership
+                  ? "Leadership workspace"
+                  : "SRC member workspace"}
               </span>
 
               <h1

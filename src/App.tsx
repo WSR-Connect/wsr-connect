@@ -14,11 +14,12 @@ import { srcMembers } from "./data/srcMembers";
 import { supabase } from "./lib/supabase";
 import DutiesPage from "./DutiesPage";
 
-import { AuthProvider } from "./auth/AuthContext";
+import { AuthProvider, useAuth } from "./auth/AuthContext";
 import LoginPage from "./auth/LoginPage";
 import ProtectedRoute from "./auth/ProtectedRoute";
 
 import PortalPage from "./portal/PortalPage";
+import SRCMemberHomePage from "./portal/SRCMemberHomePage";
 import PortalAnnouncementsPage from "./portal/AnnouncementsPage";
 import CalendarPage from "./portal/CalendarPage";
 import DutyTrackerPage from "./portal/DutyTrackerPage";
@@ -75,6 +76,7 @@ function getSeniorMember(position: string) {
 
 function Header() {
   const location = useLocation();
+  const { user, isSRC, isLeadership } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
@@ -124,6 +126,22 @@ function Header() {
     { label: "Resources", path: "/resources" },
     { label: "Feedback", path: "/feedback" },
   ];
+
+  const workspacePath = !user
+    ? "/login"
+    : isLeadership
+      ? "/portal"
+      : isSRC
+        ? "/src/home"
+        : "/login";
+
+  const workspaceLabel = !user
+    ? "SRC Login"
+    : isLeadership
+      ? "Leadership Portal"
+      : isSRC
+        ? "My SRC"
+        : "Sign in";
 
   return (
     <header
@@ -189,10 +207,10 @@ function Header() {
 
         <div className="nav-actions">
           <NavLink
-            to="/portal"
+            to={workspacePath}
             className="portal-button"
           >
-            SRC Login
+            {workspaceLabel}
             <span aria-hidden="true">↗</span>
           </NavLink>
         </div>
@@ -236,10 +254,10 @@ function Header() {
         ))}
 
         <NavLink
-          to="/portal"
+          to={workspacePath}
           className="mobile-login-link"
         >
-          SRC Login ↗
+          {workspaceLabel} ↗
         </NavLink>
       </nav>
     </header>
@@ -2102,6 +2120,15 @@ function Layout() {
           <Route
             path="/src"
             element={<SRCPage />}
+          />
+
+          <Route
+            path="/src/home"
+            element={
+              <ProtectedRoute requiredAccess="src">
+                <SRCMemberHomePage />
+              </ProtectedRoute>
+            }
           />
 
           <Route

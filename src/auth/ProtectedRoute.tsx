@@ -52,7 +52,7 @@ export default function ProtectedRoute({
   if (!hasAccess) {
     return (
       <Navigate
-        to={isSRC ? "/duties" : "/"}
+        to={isSRC ? "/src/home" : "/"}
         replace
       />
     );

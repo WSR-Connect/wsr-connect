@@ -24,7 +24,7 @@ export default function LoginPage() {
       if (isLeadership) {
         navigate("/portal", { replace: true });
       } else if (isSRC) {
-        navigate("/duties", { replace: true });
+        navigate("/src/home", { replace: true });
       } else {
         navigate("/", { replace: true });
       }
@@ -107,7 +107,7 @@ export default function LoginPage() {
           }}
         >
           Sign in with the account provided by your SRC leader. SRC
-          members go to their duty tracker; senior leaders go to the
+          members go to their member home; senior leaders go to the
           leadership workspace.
         </p>
 
