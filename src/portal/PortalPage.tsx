@@ -274,6 +274,13 @@ export default function PortalPage() {
             />
 
             <SectionCard
+              eyebrow="Schedule"
+              title="Rota Manager"
+              description="Add recurring duties, update assignments and pause or resume weekly rota entries."
+              to="/portal/rotas"
+            />
+
+            <SectionCard
               eyebrow="Communication"
               title="Announcements"
               description="Draft and publish school or SRC updates, and review what has already been shared."

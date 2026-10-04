@@ -104,6 +104,16 @@ interface DutyRota {
   updated_at: string;
 }
 
+interface DutyRotaInput {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  duty_name: string;
+  location: string;
+  assigned_to: string | null;
+  assigned_name: string | null;
+}
+
 interface DailyDuty {
   id: string;
   rota_id: string;
@@ -459,6 +469,139 @@ function normalizeTime(
     : value;
 }
 
+function parseDutyRotaInput(
+  input: Record<string, unknown>,
+): { value?: DutyRotaInput; error?: string } {
+  const dayOfWeek = input.day_of_week;
+
+  if (
+    typeof dayOfWeek !== "number" ||
+    !Number.isInteger(dayOfWeek) ||
+    dayOfWeek < 0 ||
+    dayOfWeek > 6
+  ) {
+    return { error: "Choose a valid day of the week." };
+  }
+
+  const startTime = input.start_time;
+  const endTime = input.end_time;
+
+  if (
+    typeof startTime !== "string" ||
+    typeof endTime !== "string" ||
+    !isValidTimeString(startTime) ||
+    !isValidTimeString(endTime)
+  ) {
+    return { error: "Enter valid start and end times." };
+  }
+
+  const normalizedStart = normalizeTime(startTime);
+  const normalizedEnd = normalizeTime(endTime);
+  const toMinutes = (value: string) => {
+    const [hours, minutes, seconds = 0] = value
+      .split(":")
+      .map(Number);
+
+    if (
+      hours > 23 ||
+      minutes > 59 ||
+      seconds > 59
+    ) {
+      return null;
+    }
+
+    return hours * 60 + minutes;
+  };
+  const startMinutes = toMinutes(normalizedStart);
+  const endMinutes = toMinutes(normalizedEnd);
+
+  if (startMinutes === null || endMinutes === null) {
+    return { error: "Times must be valid 24-hour times." };
+  }
+
+  if (startMinutes >= endMinutes) {
+    return { error: "The end time must be after the start time." };
+  }
+
+  const readRequiredText = (
+    key: "duty_name" | "location",
+    label: string,
+    maxLength: number,
+  ): { value: string | null; error: string | null } => {
+    const value = input[key];
+    if (typeof value !== "string" || !value.trim()) {
+      return { value: null, error: `${label} is required.` };
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length > maxLength) {
+      return {
+        value: null,
+        error: `${label} must be ${maxLength} characters or fewer.`,
+      };
+    }
+
+    return { value: trimmed, error: null };
+  };
+
+  const dutyName = readRequiredText("duty_name", "Duty name", 160);
+  if (dutyName.error) {
+    return { error: dutyName.error };
+  }
+
+  const location = readRequiredText("location", "Location", 120);
+  if (location.error) {
+    return { error: location.error };
+  }
+
+  const readOptionalText = (
+    key: "assigned_to" | "assigned_name",
+    label: string,
+    maxLength: number,
+  ): { value: string | null; error: string | null } => {
+    const value = input[key];
+    if (value === undefined || value === null) {
+      return { value: null, error: null };
+    }
+
+    if (typeof value !== "string") {
+      return { value: null, error: `${label} must be text.` };
+    }
+
+    const trimmed = value.trim();
+    if (trimmed.length > maxLength) {
+      return {
+        value: null,
+        error: `${label} must be ${maxLength} characters or fewer.`,
+      };
+    }
+
+    return { value: trimmed || null, error: null };
+  };
+
+  const assignedTo = readOptionalText("assigned_to", "Firebase UID", 128);
+  if (assignedTo.error) {
+    return { error: assignedTo.error };
+  }
+
+  const assignedName = readOptionalText("assigned_name", "Assignee name", 120);
+  if (assignedName.error) {
+    return { error: assignedName.error };
+  }
+
+  return {
+    value: {
+      day_of_week: dayOfWeek,
+      start_time: normalizedStart,
+      end_time: normalizedEnd,
+      duty_name: dutyName.value!,
+      location: location.value!,
+      assigned_to: assignedTo.value,
+      assigned_name: assignedName.value,
+    },
+  };
+}
+
 function getDayOfWeek(
   dateString: string,
 ) {
@@ -598,7 +741,6 @@ async function ensureDailyDuties(
       "day_of_week",
       dayOfWeek,
     )
-    .eq("active", true)
     .order("start_time", {
       ascending: true,
     });
@@ -622,6 +764,12 @@ async function ensureDailyDuties(
     typedRotas.map(
       (rota) => rota.id,
     );
+
+  const activeRotaIds = new Set(
+    typedRotas
+      .filter((rota) => rota.active)
+      .map((rota) => rota.id),
+  );
 
   const {
     data: existing,
@@ -651,6 +799,7 @@ async function ensureDailyDuties(
   const missingRotas =
     typedRotas.filter(
       (rota) =>
+        rota.active &&
         !existingRotaIds.has(
           rota.id,
         ),
@@ -707,8 +856,20 @@ async function ensureDailyDuties(
     );
   }
 
+  const schoolToday =
+    getSchoolDateTimeParts().date;
+  const isPastDate =
+    date < schoolToday;
+  const visibleDuties =
+    ((duties ?? []) as DailyDuty[]).filter(
+      (duty) =>
+        activeRotaIds.has(duty.rota_id) ||
+        isPastDate ||
+        duty.status !== "pending",
+    );
+
   return markExpiredDutiesUnaccounted(
-    (duties ?? []) as DailyDuty[],
+    visibleDuties,
   );
 }
 
@@ -925,7 +1086,8 @@ Deno.serve(
         resource ===
           "duty-complete" ||
         resource === "duty-cover" ||
-        resource === "duty-clear-cover"
+        resource === "duty-clear-cover" ||
+        resource === "duty-rotas"
       ) {
         const authorization =
           await requireSRC(token);
@@ -1047,6 +1209,196 @@ Deno.serve(
           });
         }
 
+        if (resource === "duty-rotas") {
+          if (!authorization.isLeadership) {
+            return jsonResponse(
+              { error: "Leadership authorization required to manage rotas." },
+              403,
+            );
+          }
+
+          if (req.method === "GET") {
+            const { data: rotas, error } = await supabase
+              .from("duty_rotas")
+              .select("*")
+              .order("day_of_week", { ascending: true })
+              .order("start_time", { ascending: true });
+
+            if (error) {
+              throw new Error(`Failed to load duty rotas: ${error.message}`);
+            }
+
+            return jsonResponse({
+              ok: true,
+              resource: "duty-rotas",
+              rotas: (rotas ?? []) as DutyRota[],
+            });
+          }
+
+          if (req.method === "POST" || req.method === "PATCH") {
+            const body = await parseJsonBody(req);
+            const isUpdate = req.method === "PATCH";
+            const id = typeof body.id === "string" ? body.id.trim() : "";
+
+            if (isUpdate && !isValidUuid(id)) {
+              return jsonResponse({ error: "A valid rota id is required." }, 400);
+            }
+
+            let existingRota: DutyRota | null = null;
+            if (isUpdate) {
+              const { data, error } = await supabase
+                .from("duty_rotas")
+                .select("*")
+                .eq("id", id)
+                .maybeSingle();
+
+              if (error) {
+                throw new Error(`Failed to load duty rota: ${error.message}`);
+              }
+
+              if (!data) {
+                return jsonResponse({ error: "Duty rota not found." }, 404);
+              }
+
+              existingRota = data as DutyRota;
+            }
+
+            const hasScheduleFields = [
+              "day_of_week",
+              "start_time",
+              "end_time",
+              "duty_name",
+              "location",
+              "assigned_to",
+              "assigned_name",
+            ].some((key) =>
+              Object.prototype.hasOwnProperty.call(body, key)
+            );
+            const hasActive = Object.prototype.hasOwnProperty.call(body, "active");
+
+            if (
+              isUpdate &&
+              !hasScheduleFields &&
+              (!hasActive || typeof body.active !== "boolean")
+            ) {
+              return jsonResponse({ error: "No valid rota changes were supplied." }, 400);
+            }
+
+            if (hasActive && typeof body.active !== "boolean") {
+              return jsonResponse({ error: "active must be true or false." }, 400);
+            }
+
+            let rotaInput: DutyRotaInput | null = null;
+            if (hasScheduleFields || !isUpdate) {
+              const parsed = parseDutyRotaInput(body);
+              if (!parsed.value) {
+                return jsonResponse({ error: parsed.error }, 400);
+              }
+
+              rotaInput = parsed.value;
+
+              if (
+                isUpdate &&
+                existingRota &&
+                rotaInput.day_of_week !== existingRota.day_of_week
+              ) {
+                return jsonResponse(
+                  {
+                    error:
+                      "A rota's weekday is fixed once created. Pause it and create a new rota for a different day so its history stays intact.",
+                  },
+                  409,
+                );
+              }
+
+              if (rotaInput.assigned_to) {
+                const assignee = await getFirestoreUser(rotaInput.assigned_to);
+                if (!assignee || assignee.role !== "src") {
+                  return jsonResponse(
+                    {
+                      error:
+                        "That Firebase UID is not linked to an SRC member profile. Check the user's Firestore profile first.",
+                    },
+                    400,
+                  );
+                }
+              }
+            }
+
+            const changedAt = new Date().toISOString();
+
+            if (!isUpdate) {
+              const { data: rota, error } = await supabase
+                .from("duty_rotas")
+                .insert({
+                  ...rotaInput,
+                  active: true,
+                  created_at: changedAt,
+                  updated_at: changedAt,
+                })
+                .select("*")
+                .single();
+
+              if (error) {
+                throw new Error(`Failed to create duty rota: ${error.message}`);
+              }
+
+              return jsonResponse({ ok: true, created: true, rota });
+            }
+
+            const changes: Record<string, unknown> = {
+              updated_at: changedAt,
+            };
+            if (rotaInput) {
+              Object.assign(changes, rotaInput);
+            }
+            if (hasActive) {
+              changes.active = body.active;
+            }
+
+            const { data: rota, error } = await supabase
+              .from("duty_rotas")
+              .update(changes)
+              .eq("id", id)
+              .select("*")
+              .single();
+
+            if (error) {
+              throw new Error(`Failed to update duty rota: ${error.message}`);
+            }
+
+            if (rotaInput) {
+              const { error: dailyError } = await supabase
+                .from("daily_duties")
+                .update({
+                  start_time: rotaInput.start_time,
+                  end_time: rotaInput.end_time,
+                  duty_name: rotaInput.duty_name,
+                  location: rotaInput.location,
+                  assigned_to: rotaInput.assigned_to,
+                  assigned_name: rotaInput.assigned_name,
+                  updated_at: changedAt,
+                })
+                .eq("rota_id", id)
+                .eq("status", "pending")
+                .gte("duty_date", getSchoolDateTimeParts().date);
+
+              if (dailyError) {
+                throw new Error(
+                  `Rota saved, but future pending duties could not be refreshed: ${dailyError.message}`,
+                );
+              }
+            }
+
+            return jsonResponse({ ok: true, updated: true, rota });
+          }
+
+          return jsonResponse(
+            { error: `Method ${req.method} is not supported for duty rotas.` },
+            405,
+          );
+        }
+
         /*
          * POST /?resource=duty-complete
          */
@@ -1058,6 +1410,9 @@ Deno.serve(
         ) {
           const body =
             await parseJsonBody(req);
+
+          const completed =
+            body.completed !== false;
 
           const id =
             typeof body.id ===
@@ -1110,7 +1465,7 @@ Deno.serve(
             return jsonResponse(
               {
                 error:
-                  "You can only complete duties assigned to you.",
+                  "You can only update duties assigned to you.",
               },
               403,
             );
@@ -1131,7 +1486,8 @@ Deno.serve(
 
           if (
             duty.status ===
-            "completed"
+              "completed" &&
+            completed
           ) {
             return jsonResponse({
               ok: true,
@@ -1140,7 +1496,18 @@ Deno.serve(
             });
           }
 
-          const completedAt =
+          if (
+            !completed &&
+            duty.status !== "completed"
+          ) {
+            return jsonResponse({
+              ok: true,
+              completed: false,
+              duty,
+            });
+          }
+
+          const changedAt =
             new Date().toISOString();
 
           const {
@@ -1149,11 +1516,13 @@ Deno.serve(
           } = await supabase
             .from("daily_duties")
             .update({
-              status: "completed",
-              completed_at:
-                completedAt,
-              updated_at:
-                completedAt,
+              status: completed
+                ? "completed"
+                : "pending",
+              completed_at: completed
+                ? changedAt
+                : null,
+              updated_at: changedAt,
             })
             .eq("id", id)
             .select("*")
@@ -1161,13 +1530,13 @@ Deno.serve(
 
           if (updateError) {
             throw new Error(
-              `Failed to complete duty: ${updateError.message}`,
+              `Failed to ${completed ? "complete" : "reopen"} duty: ${updateError.message}`,
             );
           }
 
           return jsonResponse({
             ok: true,
-            completed: true,
+            completed,
             duty: updatedDuty,
           });
         }

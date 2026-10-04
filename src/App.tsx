@@ -23,6 +23,7 @@ import SRCMemberHomePage from "./portal/SRCMemberHomePage";
 import PortalAnnouncementsPage from "./portal/AnnouncementsPage";
 import CalendarPage from "./portal/CalendarPage";
 import DutyTrackerPage from "./portal/DutyTrackerPage";
+import DutyRotaManagerPage from "./portal/DutyRotaManagerPage";
 import FeedbackInboxPage from "./portal/FeedbackInboxPage";
 
 import "./App.css";
@@ -2182,6 +2183,15 @@ function Layout() {
             element={
               <ProtectedRoute requiredAccess="leadership">
                 <DutyTrackerPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/portal/rotas"
+            element={
+              <ProtectedRoute requiredAccess="leadership">
+                <DutyRotaManagerPage />
               </ProtectedRoute>
             }
           />
