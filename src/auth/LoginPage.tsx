@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router";
+import { auth } from "../lib/firebase";
 import { useAuth } from "./AuthContext";
 
 export default function LoginPage() {
@@ -17,7 +19,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loggingIn, setLoggingIn] = useState(false);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -41,6 +46,7 @@ export default function LoginPage() {
     event.preventDefault();
 
     setError("");
+    setNotice("");
     setLoggingIn(true);
 
     try {
@@ -55,6 +61,44 @@ export default function LoginPage() {
       );
 
       setLoggingIn(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    if (!emailInputRef.current?.reportValidity()) {
+      return;
+    }
+
+    setError("");
+    setNotice("");
+    setResettingPassword(true);
+
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      setNotice(
+        "If an account exists for this email, a reset link will arrive shortly. Check your inbox and spam folder.",
+      );
+    } catch (resetError) {
+      console.error("Firebase password reset error:", resetError);
+
+      const errorCode =
+        typeof resetError === "object" &&
+        resetError !== null &&
+        "code" in resetError
+          ? resetError.code
+          : null;
+
+      if (errorCode === "auth/user-not-found") {
+        setNotice(
+          "If an account exists for this email, a reset link will arrive shortly. Check your inbox and spam folder.",
+        );
+      } else {
+        setError(
+          "We couldn't send a reset email right now. Check your connection and try again.",
+        );
+      }
+    } finally {
+      setResettingPassword(false);
     }
   }
 
@@ -106,9 +150,9 @@ export default function LoginPage() {
             lineHeight: 1.6,
           }}
         >
-          Sign in with the account provided by your SRC leader. SRC
-          members go to their member home; senior leaders go to the
-          leadership workspace.
+          Sign in with the email address and password provided by your
+          SRC leader. SRC members go to their member home; senior
+          leaders go to the leadership workspace.
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -122,16 +166,18 @@ export default function LoginPage() {
               fontWeight: 600,
             }}
           >
-            Email
+            Account email
           </label>
 
           <input
             id="email"
+            ref={emailInputRef}
             type="email"
             value={email}
-            onChange={(event) =>
-              setEmail(event.target.value)
-            }
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setNotice("");
+            }}
             required
             autoComplete="email"
             style={{
@@ -190,9 +236,23 @@ export default function LoginPage() {
             </p>
           )}
 
+          {notice && (
+            <p
+              role="status"
+              style={{
+                margin: "0 0 18px",
+                color: "#23643A",
+                fontSize: "14px",
+                lineHeight: 1.5,
+              }}
+            >
+              {notice}
+            </p>
+          )}
+
           <button
             type="submit"
-            disabled={loggingIn}
+            disabled={loggingIn || resettingPassword}
             style={{
               width: "100%",
               padding: "13px 16px",
@@ -208,6 +268,30 @@ export default function LoginPage() {
             {loggingIn
               ? "Signing in..."
               : "Sign in"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handlePasswordReset()}
+            disabled={loggingIn || resettingPassword}
+            style={{
+              display: "block",
+              margin: "16px auto 0",
+              padding: "4px",
+              border: 0,
+              background: "transparent",
+              color: "#1E5AA8",
+              font: "inherit",
+              fontSize: "14px",
+              fontWeight: 600,
+              textDecoration: "underline",
+              cursor: resettingPassword ? "wait" : "pointer",
+              opacity: resettingPassword ? 0.7 : 1,
+            }}
+          >
+            {resettingPassword
+              ? "Sending reset email..."
+              : "Forgot your password?"}
           </button>
         </form>
       </section>
