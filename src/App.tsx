@@ -10,7 +10,8 @@ import {
 } from "react-router";
 
 import ScrollReveal from "./components/ScrollReveal";
-import { srcMembers } from "./data/srcMembers";
+import SRCMemberProfileDialog from "./components/SRCMemberProfileDialog";
+import { srcMembers, type SRCMember } from "./data/srcMembers";
 import { supabase } from "./lib/supabase";
 import DutiesPage from "./DutiesPage";
 
@@ -80,37 +81,45 @@ function Header() {
   const { user, isSRC, isLeadership } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
-  const [navbarProgress, setNavbarProgress] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => {
+    const navbar = document.querySelector<HTMLElement>(".navbar");
+    const progressBar = document.querySelector<HTMLElement>(".scroll-progress");
+    let frame = 0;
+
+    const updateScrollEffects = () => {
+      frame = 0;
       const scrollTop = window.scrollY;
+      const documentHeight = Math.max(
+        document.documentElement.scrollHeight - window.innerHeight,
+        0,
+      );
+      const progress = documentHeight > 0
+        ? Math.min(scrollTop / documentHeight, 1)
+        : 0;
 
-      const documentHeight =
-        document.documentElement.scrollHeight -
-        document.documentElement.clientHeight;
-
-      const progress =
-        documentHeight > 0
-          ? Math.min(
-              Math.max(scrollTop / documentHeight, 0),
-              1,
-            )
-          : 0;
-
-      setNavbarProgress(progress);
-      setScrollProgress(progress);
+      navbar?.toggleAttribute("data-scrolled", scrollTop > 12);
+      progressBar?.style.setProperty("transform", `scaleX(${progress})`);
     };
 
-    handleScroll();
+    const scheduleScrollUpdate = () => {
+      if (frame) {
+        return;
+      }
 
-    window.addEventListener("scroll", handleScroll, {
-      passive: true,
-    });
+      frame = window.requestAnimationFrame(updateScrollEffects);
+    };
+
+    updateScrollEffects();
+    window.addEventListener("scroll", scheduleScrollUpdate, { passive: true });
+    window.addEventListener("resize", scheduleScrollUpdate);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", scheduleScrollUpdate);
+      window.removeEventListener("resize", scheduleScrollUpdate);
+      if (frame) {
+        window.cancelAnimationFrame(frame);
+      }
     };
   }, []);
 
@@ -146,22 +155,14 @@ function Header() {
 
   return (
     <header
-  className={`navbar ${
-    location.pathname === "/"
-      ? "navbar-home"
-      : "navbar-inner-page"
-  }`}
-  style={
-    {
-      "--navbar-progress": navbarProgress,
-    } as React.CSSProperties
-  }
->
+      className={`navbar ${
+        location.pathname === "/"
+          ? "navbar-home"
+          : "navbar-inner-page"
+      }`}
+    >
       <div
         className="scroll-progress"
-        style={{
-          transform: `scaleX(${scrollProgress})`,
-        }}
         aria-hidden="true"
       />
 
@@ -1160,36 +1161,74 @@ function EventsPage() {
    ========================================================= */
 
 function MemberCard({
-  position,
-  name,
-  grade,
+  member,
+  onOpen,
 }: {
-  position: string;
-  name: string;
-  grade: string;
+  member: SRCMember;
+  onOpen: (member: SRCMember) => void;
 }) {
+  const initials = member.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
   return (
-    <article className="src-member-card">
+    <button
+      type="button"
+      className="src-member-card"
+      onClick={() => onOpen(member)}
+      aria-haspopup="dialog"
+      aria-label={`View ${member.name}, ${member.position}`}
+    >
       <div className="src-member-top">
         <span className="src-member-role">
-          {position}
+          {member.position}
         </span>
 
         <span className="src-member-grade">
-          {grade}
+          {member.grade === "N/A" ? "SRC" : member.grade}
         </span>
       </div>
 
-      <h3>{name}</h3>
+      <div className="src-member-identity">
+        <span className="src-member-avatar" aria-hidden="true">
+          {member.photoUrl ? (
+            <img src={member.photoUrl} alt="" />
+          ) : (
+            initials
+          )}
+        </span>
+
+        <span className="src-member-name-block">
+          <span className="src-member-name">{member.name}</span>
+          <span className="src-member-view-hint">View profile</span>
+        </span>
+      </div>
 
       <div className="src-member-footer">
         <span>WSR Student Leadership</span>
+        <span className="src-member-arrow" aria-hidden="true">↗</span>
       </div>
-    </article>
+    </button>
   );
 }
 
 function SRCPage() {
+  const [selectedMember, setSelectedMember] = useState<SRCMember | null>(null);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  const normalizedSearch = memberSearch.trim().toLocaleLowerCase();
+  const matchesSearch = (member: SRCMember) =>
+    !normalizedSearch ||
+    [member.name, member.position, member.grade, member.category]
+      .join(" ")
+      .toLocaleLowerCase()
+      .includes(normalizedSearch);
+
   const seniorLeadership = seniorLeadershipOrder
     .map((position) => getSeniorMember(position))
     .filter(
@@ -1197,7 +1236,27 @@ function SRCPage() {
         member,
       ): member is NonNullable<typeof member> =>
         Boolean(member),
-    );
+    )
+    .filter(matchesSearch);
+
+  const showSeniorLeadership =
+    activeCategory === "All" || activeCategory === "Senior Leadership";
+  const visibleSeniorLeadership = showSeniorLeadership
+    ? seniorLeadership
+    : [];
+  const visibleGroups = srcCategories
+    .filter((category) => activeCategory === "All" || activeCategory === category)
+    .map((category) => ({
+      category,
+      members: srcMembers.filter(
+        (member) => member.category === category && matchesSearch(member),
+      ),
+    }))
+    .filter((group) => group.members.length > 0);
+  const visibleMemberCount =
+    visibleSeniorLeadership.length +
+    visibleGroups.reduce((total, group) => total + group.members.length, 0);
+  const filterOptions = ["All", "Senior Leadership", ...srcCategories];
 
   return (
     <>
@@ -1236,70 +1295,115 @@ function SRCPage() {
         </div>
       </section>
 
-      <section className="section src-section">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">
-              HIGHEST LEADERSHIP
-            </span>
-
-            <h2>Senior Leadership</h2>
-          </div>
-
-          <span className="src-count">
-            {seniorLeadership.length} leaders
-          </span>
+      <section
+        className="src-directory-tools"
+        aria-label="Search and filter SRC members"
+      >
+        <div className="src-directory-search">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle cx="10.8" cy="10.8" r="6.8" />
+            <path d="m16 16 4.2 4.2" />
+          </svg>
+          <input
+            type="search"
+            value={memberSearch}
+            onChange={(event) => setMemberSearch(event.target.value)}
+            placeholder="Search names, roles or year groups"
+            aria-label="Search SRC members by name, role or year group"
+          />
+          {memberSearch && (
+            <button
+              type="button"
+              className="src-directory-clear"
+              onClick={() => setMemberSearch("")}
+              aria-label="Clear member search"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          )}
         </div>
 
-        <div className="src-senior-leadership">
-          {Array.from({
-            length: Math.ceil(
-              seniorLeadership.length / 2,
-            ),
-          }).map((_, pairIndex) => {
-            const first =
-              seniorLeadership[pairIndex * 2];
-
-            const second =
-              seniorLeadership[pairIndex * 2 + 1];
-
-            if (!first) {
-              return null;
-            }
-
-            return (
-              <div
-                key={`${first.position}-${second?.position ?? "single"}`}
-                className="src-senior-row"
-              >
-                <MemberCard
-                  position={first.position}
-                  name={first.name}
-                  grade={first.grade}
-                />
-
-                {second && (
-                  <MemberCard
-                    position={second.position}
-                    name={second.name}
-                    grade={second.grade}
-                  />
-                )}
-              </div>
-            );
-          })}
+        <div
+          className="src-directory-filters"
+          role="group"
+          aria-label="Filter by leadership area"
+        >
+          {filterOptions.map((category) => (
+            <button
+              key={category}
+              type="button"
+              className={`src-directory-filter${
+                activeCategory === category ? " is-active" : ""
+              }`}
+              aria-pressed={activeCategory === category}
+              onClick={() => setActiveCategory(category)}
+            >
+              {category === "All" ? "All roles" : category}
+            </button>
+          ))}
         </div>
+
+        <p className="src-directory-results" aria-live="polite">
+          Showing <strong>{visibleMemberCount}</strong> of {srcMembers.length}{" "}
+          {srcMembers.length === 1 ? "member" : "members"}
+        </p>
       </section>
 
-      {srcCategories.map((category) => {
-        const members = srcMembers.filter(
-          (member) => member.category === category,
-        );
+      {visibleSeniorLeadership.length > 0 && (
+        <section className="section src-section">
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">
+                HIGHEST LEADERSHIP
+              </span>
 
-        if (members.length === 0) {
-          return null;
-        }
+              <h2>Senior Leadership</h2>
+            </div>
 
+            <span className="src-count">
+              {visibleSeniorLeadership.length} leaders
+            </span>
+          </div>
+
+          <div className="src-senior-leadership">
+            {Array.from({
+              length: Math.ceil(visibleSeniorLeadership.length / 2),
+            }).map((_, pairIndex) => {
+              const first = visibleSeniorLeadership[pairIndex * 2];
+              const second = visibleSeniorLeadership[pairIndex * 2 + 1];
+
+              if (!first) {
+                return null;
+              }
+
+              return (
+                <div
+                  key={`${first.position}-${second?.position ?? "single"}`}
+                  className="src-senior-row"
+                >
+                  <MemberCard
+                    member={first}
+                    onOpen={setSelectedMember}
+                  />
+
+                  {second && (
+                    <MemberCard
+                      member={second}
+                      onOpen={setSelectedMember}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {visibleGroups.map(({ category, members }) => {
         return (
           <section
             className="section src-section"
@@ -1326,15 +1430,34 @@ function SRCPage() {
               {members.map((member) => (
                 <MemberCard
                   key={`${member.position}-${member.name}`}
-                  position={member.position}
-                  name={member.name}
-                  grade={member.grade}
+                  member={member}
+                  onOpen={setSelectedMember}
                 />
               ))}
             </div>
           </section>
         );
       })}
+
+      {visibleMemberCount === 0 && (
+        <div className="src-directory-empty" role="status">
+          <span className="src-directory-empty__mark" aria-hidden="true">
+            0
+          </span>
+          <h2>No members match that search.</h2>
+          <p>Try another name, role or leadership area.</p>
+          <button
+            type="button"
+            className="src-directory-reset"
+            onClick={() => {
+              setMemberSearch("");
+              setActiveCategory("All");
+            }}
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
 
       <section className="section">
         <div className="src-contact-note">
@@ -1360,6 +1483,13 @@ function SRCPage() {
           </NavLink>
         </div>
       </section>
+
+      {selectedMember && (
+        <SRCMemberProfileDialog
+          member={selectedMember}
+          onClose={() => setSelectedMember(null)}
+        />
+      )}
     </>
   );
 }
@@ -2094,136 +2224,8 @@ function Layout() {
   const location = useLocation();
 
   useEffect(() => {
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    window.scrollTo({
-      top: 0,
-      behavior: reduceMotion ? "auto" : "smooth",
-    });
+    window.scrollTo(0, 0);
   }, [location.pathname]);
-
-  useEffect(() => {
-    const canHover = window.matchMedia(
-      "(hover: hover) and (pointer: fine)",
-    ).matches;
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    if (!canHover || reduceMotion) {
-      return;
-    }
-
-    const surfaceSelector = [
-      ".announcement-card",
-      ".calendar-card",
-      ".feedback-panel",
-      ".portal-tool-card",
-      ".resource-card",
-      ".resource-page-card",
-      ".rota-manager__rota",
-      ".src-member-card",
-      ".src-member-home__panel",
-      ".src-member-home__tool",
-    ].join(",");
-
-    let frame = 0;
-    let latestEvent: PointerEvent | null = null;
-    let activeSurface: HTMLElement | null = null;
-
-    const resetSurface = () => {
-      activeSurface?.removeAttribute("data-premium-pointer");
-      activeSurface?.style.removeProperty("--surface-x");
-      activeSurface?.style.removeProperty("--surface-y");
-      activeSurface?.style.removeProperty("--surface-tilt-x");
-      activeSurface?.style.removeProperty("--surface-tilt-y");
-      activeSurface = null;
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      latestEvent = event;
-
-      if (frame) {
-        return;
-      }
-
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        const pointerEvent = latestEvent;
-        latestEvent = null;
-
-        if (!pointerEvent) {
-          return;
-        }
-
-        const pointerX = pointerEvent.clientX / window.innerWidth;
-        const pointerY = pointerEvent.clientY / window.innerHeight;
-        document.documentElement.style.setProperty(
-          "--pointer-x",
-          `${Math.round(pointerX * 100)}%`,
-        );
-        document.documentElement.style.setProperty(
-          "--pointer-y",
-          `${Math.round(pointerY * 100)}%`,
-        );
-
-        const eventTarget = pointerEvent.target;
-        const surface =
-          eventTarget instanceof Element
-            ? eventTarget.closest<HTMLElement>(surfaceSelector)
-            : null;
-
-        if (activeSurface !== surface) {
-          resetSurface();
-          activeSurface = surface;
-        }
-
-        if (!surface) {
-          return;
-        }
-
-        const bounds = surface.getBoundingClientRect();
-        const x = Math.max(
-          0,
-          Math.min(100, ((pointerEvent.clientX - bounds.left) / bounds.width) * 100),
-        );
-        const y = Math.max(
-          0,
-          Math.min(100, ((pointerEvent.clientY - bounds.top) / bounds.height) * 100),
-        );
-
-        surface.dataset.premiumPointer = "true";
-        surface.style.setProperty("--surface-x", `${x}%`);
-        surface.style.setProperty("--surface-y", `${y}%`);
-        surface.style.setProperty(
-          "--surface-tilt-x",
-          `${((x - 50) / 50) * 2}deg`,
-        );
-        surface.style.setProperty(
-          "--surface-tilt-y",
-          `${((50 - y) / 50) * 2}deg`,
-        );
-      });
-    };
-
-    document.addEventListener("pointermove", handlePointerMove, {
-      passive: true,
-    });
-    document.addEventListener("pointerleave", resetSurface);
-    window.addEventListener("blur", resetSurface);
-
-    return () => {
-      document.removeEventListener("pointermove", handlePointerMove);
-      document.removeEventListener("pointerleave", resetSurface);
-      window.removeEventListener("blur", resetSurface);
-      if (frame) {
-        window.cancelAnimationFrame(frame);
-      }
-      resetSurface();
-    };
-  }, []);
 
   const isPortalRoute =
     location.pathname === "/portal" ||

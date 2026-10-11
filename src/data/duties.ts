@@ -914,11 +914,11 @@ export const corridorDutyAssignments: TimetableAssignments = {
       "Siri",
       "Devanshi",
       "Nourin",
+      "Siri",
       "Zenia",
-      "Mariam Hamadeh",
     ],
     Tuesday: [
-      "Devanshi",
+      "Sarah Sen",
       "Eshaal",
       "Mariam Hamadeh",
       "Nourin",

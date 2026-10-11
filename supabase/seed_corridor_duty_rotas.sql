@@ -1,7 +1,7 @@
--- Corridor-duty pilot rota generated from src/data/duties.ts.
+-- Corridor-duty rota seed aligned with the Google Sheet's current girls' rota.
 -- Lesson duties end 5 minutes before the next lesson starts; the final duty ends at 14:15.
 -- assigned_to is NULL until each student's Firebase UID is mapped. Keep display names in assigned_name.
--- Safe to rerun: matching active rota rows are skipped.
+-- Safe to rerun: matching active slots are refreshed; missing slots are inserted.
 
 BEGIN;
 
@@ -12,8 +12,8 @@ WITH seed(day_of_week, start_time, end_time, duty_name, location, assigned_name)
     (1, '09:30', '10:35', 'Girls corridor duty - Lesson 3', 'New Building Corridor', 'Siri'),
     (1, '10:40', '11:20', 'Girls corridor duty - Lesson 4', 'New Building Corridor', 'Devanshi'),
     (1, '11:25', '12:35', 'Girls corridor duty - Lesson 5', 'New Building Corridor', 'Nourin'),
-    (1, '12:40', '13:20', 'Girls corridor duty - Lesson 6', 'New Building Corridor', 'Zenia'),
-    (1, '13:25', '14:15', 'Girls corridor duty - Lesson 7', 'New Building Corridor', 'Mariam Hamadeh'),
+    (1, '12:40', '13:20', 'Girls corridor duty - Lesson 6', 'New Building Corridor', 'Siri'),
+    (1, '13:25', '14:15', 'Girls corridor duty - Lesson 7', 'New Building Corridor', 'Zenia'),
     (1, '07:40', '08:35', 'Girls corridor duty - Lesson 1', 'Old Building Corridor', 'Siri'),
     (1, '08:40', '09:25', 'Girls corridor duty - Lesson 2', 'Old Building Corridor', 'Fatma Abdullah'),
     (1, '09:30', '10:35', 'Girls corridor duty - Lesson 3', 'Old Building Corridor', 'Maryam Hassan'),
@@ -35,7 +35,7 @@ WITH seed(day_of_week, start_time, end_time, duty_name, location, assigned_name)
     (1, '11:25', '12:35', 'Boys corridor duty - Lesson 5', 'Old Building Corridor', 'Sinan'),
     (1, '12:40', '13:20', 'Boys corridor duty - Lesson 6', 'Old Building Corridor', 'Karam (V)'),
     (1, '13:25', '14:15', 'Boys corridor duty - Lesson 7', 'Old Building Corridor', 'Sofyan'),
-    (2, '07:40', '08:35', 'Girls corridor duty - Lesson 1', 'New Building Corridor', 'Devanshi'),
+    (2, '07:40', '08:35', 'Girls corridor duty - Lesson 1', 'New Building Corridor', 'Sarah Sen'),
     (2, '08:40', '09:25', 'Girls corridor duty - Lesson 2', 'New Building Corridor', 'Eshaal'),
     (2, '09:30', '10:35', 'Girls corridor duty - Lesson 3', 'New Building Corridor', 'Mariam Hamadeh'),
     (2, '10:40', '11:20', 'Girls corridor duty - Lesson 4', 'New Building Corridor', 'Nourin'),
@@ -135,6 +135,23 @@ WITH seed(day_of_week, start_time, end_time, duty_name, location, assigned_name)
     (5, '08:40', '09:25', 'Boys corridor duty - Lesson 2', 'Old Building Corridor', 'Hayk'),
     (5, '09:30', '10:35', 'Boys corridor duty - Lesson 3', 'Old Building Corridor', 'Joel'),
     (5, '10:40', '14:15', 'Boys corridor duty - Lesson 4', 'Old Building Corridor', 'Shayan')
+), updated AS (
+  UPDATE public.duty_rotas AS existing
+  SET
+    assigned_to = CASE
+      WHEN existing.assigned_name IS DISTINCT FROM seed.assigned_name THEN NULL
+      ELSE existing.assigned_to
+    END,
+    assigned_name = seed.assigned_name,
+    updated_at = now()
+  FROM seed
+  WHERE existing.active = true
+    AND existing.day_of_week = seed.day_of_week
+    AND existing.start_time = seed.start_time::time
+    AND existing.end_time = seed.end_time::time
+    AND existing.duty_name = seed.duty_name
+    AND existing.location = seed.location
+  RETURNING existing.id
 ), inserted AS (
   INSERT INTO public.duty_rotas (
     id, day_of_week, start_time, end_time, duty_name, location,
@@ -154,11 +171,12 @@ WITH seed(day_of_week, start_time, end_time, duty_name, location, assigned_name)
       AND existing.end_time = seed.end_time::time
       AND existing.duty_name = seed.duty_name
       AND existing.location = seed.location
-      AND existing.assigned_name IS NOT DISTINCT FROM seed.assigned_name
       AND existing.active = true
   )
   RETURNING id
 )
-SELECT count(*) AS inserted_rota_rows FROM inserted;
+SELECT
+  (SELECT count(*) FROM updated) AS updated_rota_rows,
+  (SELECT count(*) FROM inserted) AS inserted_rota_rows;
 
 COMMIT;

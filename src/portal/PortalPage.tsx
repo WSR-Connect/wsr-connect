@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthContext";
+import "./PortalPage.css";
 
 function formatPosition(position: string | null) {
   if (!position) {
@@ -17,13 +19,39 @@ function formatPosition(position: string | null) {
     labels[position] ??
     position
       .split("_")
-      .map(
-        (word) =>
-          word.charAt(0).toUpperCase() +
-          word.slice(1),
-      )
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ")
   );
+}
+
+function getDubaiGreeting() {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: "Asia/Dubai",
+    }).format(new Date()),
+  );
+
+  if (hour < 12) {
+    return "Good morning";
+  }
+
+  if (hour < 17) {
+    return "Good afternoon";
+  }
+
+  return "Good evening";
+}
+
+function getDubaiDate() {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "Asia/Dubai",
+  }).format(new Date());
 }
 
 interface SectionCardProps {
@@ -31,6 +59,8 @@ interface SectionCardProps {
   title: string;
   description: string;
   to: string;
+  mark: string;
+  action: string;
 }
 
 function SectionCard({
@@ -38,314 +68,180 @@ function SectionCard({
   title,
   description,
   to,
+  mark,
+  action,
 }: SectionCardProps) {
   return (
-    <NavLink
-      to={to}
-      className="portal-tool-card"
-    >
-      <span className="portal-tool-eyebrow">
-        {eyebrow}
-      </span>
+    <NavLink to={to} className="leadership-tool-card">
+      <div className="leadership-tool-card__top">
+        <span className="leadership-tool-card__mark" aria-hidden="true">
+          {mark}
+        </span>
+        <span className="leadership-tool-card__eyebrow">{eyebrow}</span>
+      </div>
 
-      <h3 className="portal-tool-title">
-        {title}
-      </h3>
+      <h3>{title}</h3>
+      <p>{description}</p>
 
-      <p className="portal-tool-description">
-        {description}
-      </p>
-
-      <span className="portal-tool-action">
-        Open tool <span aria-hidden="true">↗</span>
+      <span className="leadership-tool-card__action">
+        {action}
+        <span aria-hidden="true">↗</span>
       </span>
     </NavLink>
   );
 }
 
+const leadershipTools: SectionCardProps[] = [
+  {
+    eyebrow: "Accountability",
+    title: "Duty tracker",
+    description:
+      "Review daily assignments and record completion or cover, all in one place.",
+    to: "/portal/duties",
+    mark: "✓",
+    action: "Open tracker",
+  },
+  {
+    eyebrow: "Schedule",
+    title: "Rota manager",
+    description:
+      "Manage recurring duties and keep weekly assignments up to date.",
+    to: "/portal/rotas",
+    mark: "↻",
+    action: "Manage rotas",
+  },
+  {
+    eyebrow: "Communication",
+    title: "Announcements",
+    description:
+      "Prepare school and SRC updates, then review what has been shared.",
+    to: "/portal/announcements",
+    mark: "↗",
+    action: "View updates",
+  },
+  {
+    eyebrow: "Schedule",
+    title: "Calendar",
+    description:
+      "Keep school, SRC, meeting, and leadership events organized.",
+    to: "/portal/calendar",
+    mark: "▦",
+    action: "Open calendar",
+  },
+  {
+    eyebrow: "Student voice",
+    title: "Feedback inbox",
+    description:
+      "Review submissions and keep follow-up work moving.",
+    to: "/portal/feedback",
+    mark: "…",
+    action: "Review feedback",
+  },
+];
+
 export default function PortalPage() {
-  const {
-    user,
-    position,
-    signOutUser,
-  } = useAuth();
-
+  const { user, position, signOutUser } = useAuth();
   const navigate = useNavigate();
-
-  const positionLabel =
-    formatPosition(position);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   async function handleSignOut() {
+    setSigningOut(true);
+    setSignOutError(null);
+
     try {
       await signOutUser();
-
-      navigate("/login", {
-        replace: true,
-      });
+      navigate("/login", { replace: true });
     } catch (error) {
-      console.error(
-        "Firebase sign-out error:",
-        error,
-      );
+      console.error("Firebase sign-out error:", error);
+      setSignOutError("You could not be signed out. Please try again.");
+      setSigningOut(false);
     }
   }
 
+  const positionLabel = formatPosition(position);
+  const dateLabel = getDubaiDate();
+
   return (
-    <main
-      style={{
-        background: "#F7F8F9",
-        minHeight: "70vh",
-        padding: "48px 20px 72px",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1100px",
-          margin: "0 auto",
-        }}
-      >
-        <section
-          style={{
-            padding: "36px",
-            background: "#123B6D",
-            color: "#FFFFFF",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: "24px",
-              alignItems: "flex-start",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <span
-                style={{
-                  display: "block",
-                  marginBottom: "10px",
-                  color: "#FFFFFF",
-                  opacity: 0.75,
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                }}
-              >
-                WSR Connect
-              </span>
-
-              <h1
-                style={{
-                  margin: "0 0 10px",
-                  fontSize:
-                    "clamp(30px, 5vw, 44px)",
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.03em",
-                }}
-              >
-                Leadership Portal
-              </h1>
-
-              <p
-                style={{
-                  margin: 0,
-                  maxWidth: "600px",
-                  color: "#FFFFFF",
-                  opacity: 0.85,
-                  lineHeight: 1.6,
-                }}
-              >
-                The private working space
-                for the four senior SRC
-                leaders.
-              </p>
-            </div>
-
-            <div
-              style={{
-                minWidth: "190px",
-                padding: "16px",
-                border:
-                  "1px solid rgba(255,255,255,0.2)",
-              }}
-            >
-              <span
-                style={{
-                  display: "block",
-                  marginBottom: "6px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  opacity: 0.7,
-                }}
-              >
-                Signed in as
-              </span>
-
-              <strong
-                style={{
-                  display: "block",
-                  fontSize: "17px",
-                }}
-              >
-                {positionLabel}
-              </strong>
-
-              {user?.email && (
-                <span
-                  style={{
-                    display: "block",
-                    marginTop: "5px",
-                    fontSize: "12px",
-                    opacity: 0.7,
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {user.email}
-                </span>
-              )}
-            </div>
+    <main className="leadership-portal">
+      <div className="leadership-portal__container">
+        <section className="leadership-portal__hero" aria-labelledby="leadership-title">
+          <div className="leadership-portal__hero-copy">
+            <span className="leadership-portal__eyebrow">
+              WSR Connect <span aria-hidden="true">/</span> Leadership
+            </span>
+            <h1 id="leadership-title">
+              {user?.displayName?.trim()
+                ? `${getDubaiGreeting()}, ${user.displayName.trim().split(/\s+/)[0]}.`
+                : "Welcome back."}
+            </h1>
+            <p>
+              Your leadership tools, schedules, and student updates—together in
+              one workspace.
+            </p>
+            <NavLink className="leadership-portal__primary-link" to="/portal/duties">
+              Go to duty tracker <span aria-hidden="true">↗</span>
+            </NavLink>
           </div>
-        </section>
 
-        <section
-          style={{
-            marginTop: "32px",
-          }}
-        >
-          <div
-            style={{
-              marginBottom: "20px",
-            }}
-          >
-            <span
-              style={{
-                display: "block",
-                marginBottom: "7px",
-                color: "#1E5AA8",
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
+          <aside className="leadership-portal__account" aria-label="Account overview">
+            <div className="leadership-portal__account-mark" aria-hidden="true">
+              {positionLabel
+                .split(/\s+/)
+                .map((word) => word.charAt(0))
+                .join("")
+                .slice(0, 2)}
+            </div>
+            <span className="leadership-portal__account-label">Signed in as</span>
+            <strong>{positionLabel}</strong>
+            <span className="leadership-portal__account-date">{dateLabel}</span>
+            <span className="leadership-portal__account-access">
               Leadership workspace
             </span>
+          </aside>
+          <span className="leadership-portal__hero-orbit" aria-hidden="true" />
+        </section>
 
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "28px",
-              }}
-            >
-              Tools you can use now
-            </h2>
-
-            <p
-              style={{
-                margin: "8px 0 0",
-                color: "#73777C",
-                fontSize: "14px",
-                lineHeight: 1.6,
-              }}
-            >
-              Open a tool below to coordinate duties, events,
-              announcements, or student feedback.
+        <section className="leadership-portal__tools" aria-labelledby="leadership-tools-title">
+          <div className="leadership-portal__section-heading">
+            <div>
+              <span className="leadership-portal__section-label">Your workspace</span>
+              <h2 id="leadership-tools-title">Tools for the work ahead.</h2>
+            </div>
+            <p>
+              Choose a tool to manage duties, keep the team informed, and follow
+              up on student feedback.
             </p>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            <SectionCard
-              eyebrow="Accountability"
-              title="Duty Tracker"
-              description="Track every SRC duty, location and assignment. Record completion or cover so no duty is left unaccounted for."
-              to="/portal/duties"
-            />
-
-            <SectionCard
-              eyebrow="Schedule"
-              title="Rota Manager"
-              description="Add recurring duties, update assignments and pause or resume weekly rota entries."
-              to="/portal/rotas"
-            />
-
-            <SectionCard
-              eyebrow="Communication"
-              title="Announcements"
-              description="Draft and publish school or SRC updates, and review what has already been shared."
-              to="/portal/announcements"
-            />
-
-            <SectionCard
-              eyebrow="Schedule"
-              title="Calendar"
-              description="View and manage important school, SRC, meeting and leadership events."
-              to="/portal/calendar"
-            />
-
-            <SectionCard
-              eyebrow="Feedback"
-              title="Feedback Inbox"
-              description="Review student feedback, requests, concerns and follow-up items submitted through WSR Connect."
-              to="/portal/feedback"
-            />
+          <div className="leadership-portal__tool-grid">
+            {leadershipTools.map((tool) => (
+              <SectionCard key={tool.to} {...tool} />
+            ))}
           </div>
         </section>
 
-        <section
-          style={{
-            marginTop: "48px",
-            paddingTop: "24px",
-            borderTop:
-              "1px solid #D9DDE1",
-            display: "flex",
-            justifyContent:
-              "space-between",
-            alignItems: "center",
-            gap: "16px",
-            flexWrap: "wrap",
-          }}
-        >
-          <NavLink
-            to="/"
-            style={{
-              color: "#3F4348",
-              textDecoration: "none",
-              fontSize: "14px",
-              fontWeight: 600,
-            }}
-          >
-            ← Back to public site
+        <footer className="leadership-portal__footer">
+          <NavLink to="/" className="leadership-portal__back-link">
+            <span aria-hidden="true">←</span> Back to WSR Connect
           </NavLink>
 
-          <button
-            type="button"
-            onClick={handleSignOut}
-            style={{
-              padding: "11px 16px",
-              border:
-                "1px solid #D9DDE1",
-              background: "#FFFFFF",
-              color: "#3F4348",
-              font: "inherit",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Sign out
-          </button>
-        </section>
+          <div className="leadership-portal__signout-group">
+            {signOutError && (
+              <span className="leadership-portal__signout-error" role="alert">
+                {signOutError}
+              </span>
+            )}
+            <button
+              className="leadership-portal__signout"
+              type="button"
+              onClick={() => void handleSignOut()}
+              disabled={signingOut}
+            >
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
+          </div>
+        </footer>
       </div>
     </main>
   );

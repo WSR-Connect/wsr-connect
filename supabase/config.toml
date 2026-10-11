@@ -4,3 +4,7 @@ project_id = "kulmkrqoadsoaocuovpe"
 # This function verifies Firebase ID tokens itself. Supabase's gateway must
 # not reject those tokens before the function can validate them.
 verify_jwt = false
+
+[functions.sync-girls-corridor]
+# Google Apps Script is authenticated inside the function with a shared secret.
+verify_jwt = false

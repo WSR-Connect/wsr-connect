@@ -131,6 +131,12 @@ export default function DutyRotaManagerPage() {
     });
   }, [dayFilter, rotas, statusFilter]);
 
+  const activeRotaCount = rotas.filter((rota) => rota.active).length;
+  const pausedRotaCount = rotas.length - activeRotaCount;
+  const activeDayCount = new Set(
+    rotas.filter((rota) => rota.active).map((rota) => rota.day_of_week),
+  ).size;
+
   function startNewRota() {
     setEditingRota(null);
     setDraft(EMPTY_DRAFT);
@@ -276,6 +282,24 @@ export default function DutyRotaManagerPage() {
             </button>
           </div>
         )}
+
+        <section className="rota-manager__summary" aria-label="Weekly rota overview">
+          <article>
+            <span>Active rotas</span>
+            <strong>{activeRotaCount}</strong>
+            <small>Currently creating upcoming duties</small>
+          </article>
+          <article>
+            <span>Paused rotas</span>
+            <strong>{pausedRotaCount}</strong>
+            <small>Kept for reference and history</small>
+          </article>
+          <article>
+            <span>Days covered</span>
+            <strong>{activeDayCount}<small> / 7</small></strong>
+            <small>Weekdays with an active rota</small>
+          </article>
+        </section>
 
         <section className="rota-manager__toolbar" aria-label="Rota filters and actions">
           <label>

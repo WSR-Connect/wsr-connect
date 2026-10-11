@@ -3,6 +3,8 @@ export type SRCMember = {
   name: string;
   grade: string;
   category: string;
+  photoUrl?: string;
+  bio?: string;
 };
 
 export const srcMembers: SRCMember[] = [

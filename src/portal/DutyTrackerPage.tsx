@@ -6,6 +6,7 @@ import {
 } from "react";
 import { NavLink } from "react-router";
 import { useAuth } from "../auth/AuthContext";
+import "./DutyTrackerPage.css";
 import {
   corridorCoverAvailability,
   type CorridorCoverDay,
@@ -562,726 +563,231 @@ export default function DutyTrackerPage() {
   const totalCount =
     summary?.total ?? duties.length;
 
+  const pendingCount =
+    summary?.pending ??
+    duties.filter((duty) => duty.status === "pending").length;
+
   return (
-    <main
-      style={{
-        minHeight: "70vh",
-        background: "#F7F8F9",
-        padding: "48px 20px 72px",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1100px",
-          margin: "0 auto",
-        }}
-      >
-        <section
-          style={{
-            background: "#123B6D",
-            color: "#FFFFFF",
-            padding: "34px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent:
-                "space-between",
-              gap: "24px",
-              alignItems: "flex-end",
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <span
-                style={{
-                  display: "block",
-                  marginBottom: "9px",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  letterSpacing: "0.1em",
-                  textTransform:
-                    "uppercase",
-                  opacity: 0.72,
-                }}
-              >
-                {isLeadership
-                  ? "Leadership workspace"
-                  : "SRC member workspace"}
-              </span>
-
-              <h1
-                style={{
-                  margin: "0 0 10px",
-                  fontSize:
-                    "clamp(30px, 5vw, 44px)",
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.03em",
-                }}
-              >
-                Duty Tracker
-              </h1>
-
-              <p
-                style={{
-                  margin: 0,
-                  maxWidth: "650px",
-                  lineHeight: 1.6,
-                  opacity: 0.85,
-                }}
-              >
-                Record every duty, every
-                location, every completion
-                and every cover.
-              </p>
-            </div>
-
-            <NavLink
-              to="/portal"
-              style={{
-                color: "#FFFFFF",
-                textDecoration: "none",
-                fontSize: "14px",
-                fontWeight: 700,
-              }}
-            >
-              ← Portal
-            </NavLink>
-          </div>
-        </section>
-
-        <section
-          style={{
-            marginTop: "18px",
-            display: "flex",
-            justifyContent:
-              "space-between",
-            alignItems: "center",
-            gap: "16px",
-            flexWrap: "wrap",
-            padding: "18px 20px",
-            border:
-              "1px solid #D9DDE1",
-            background: "#FFFFFF",
-          }}
-        >
-          <div>
-            <span
-              style={{
-                display: "block",
-                marginBottom: "5px",
-                color: "#73777C",
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "0.07em",
-                textTransform:
-                  "uppercase",
-              }}
-            >
-              Duty date
+    <main className="duty-tracker">
+      <div className="duty-tracker__container">
+        <header className="duty-tracker__hero">
+          <div className="duty-tracker__hero-copy">
+            <span className="duty-tracker__eyebrow">
+              {isLeadership ? "Leadership workspace" : "SRC member workspace"}
+              <span aria-hidden="true"> / </span>
+              Daily coordination
             </span>
-
-            <strong
-              style={{
-                fontSize: "18px",
-              }}
-            >
-              {formatDate(selectedDate)}
-            </strong>
+            <h1>Duty Tracker</h1>
+            <p>
+              Keep the day’s assignments clear, record covers, and update each
+              duty as it happens.
+            </p>
           </div>
+          <NavLink className="duty-tracker__hero-link" to={isLeadership ? "/portal" : "/src/home"}>
+            {isLeadership ? "Leadership portal" : "My SRC home"}
+            <span aria-hidden="true">↗</span>
+          </NavLink>
+          <span className="duty-tracker__hero-orbit" aria-hidden="true" />
+        </header>
 
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(event) =>
-              setSelectedDate(
-                event.target.value,
-              )
-            }
-            style={{
-              padding: "10px 12px",
-              border:
-                "1px solid #C9CDD1",
-              background: "#FFFFFF",
-              color: "#111111",
-              font: "inherit",
-            }}
-          />
+        <section className="duty-tracker__date-panel" aria-label="Choose a duty date">
+          <div className="duty-tracker__date-copy">
+            <span className="duty-tracker__section-label">Viewing schedule</span>
+            <strong>{formatDate(selectedDate)}</strong>
+          </div>
+          <div className="duty-tracker__date-actions">
+            <button
+              className="duty-tracker__secondary-button"
+              type="button"
+              onClick={() => setSelectedDate(getTodayString())}
+              disabled={selectedDate === getTodayString()}
+            >
+              Today
+            </button>
+            <label className="duty-tracker__date-input">
+              <span className="duty-tracker__visually-hidden">Choose a date</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+              />
+            </label>
+            <button
+              className="duty-tracker__secondary-button"
+              type="button"
+              onClick={() => void loadDuties()}
+              disabled={loading}
+            >
+              {loading ? "Refreshing…" : "Refresh"}
+            </button>
+          </div>
         </section>
 
-        <section
-          style={{
-            marginTop: "16px",
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(150px, 1fr))",
-            gap: "10px",
-          }}
-        >
+        <section className="duty-tracker__metrics" aria-label={`${formatDate(selectedDate)} duty summary`}>
           {[
-            [
-              "Total duties",
-              totalCount,
-            ],
-            [
-              "Completed",
-              completedCount,
-            ],
-            [
-              "Covered",
-              coveredCount,
-            ],
-            [
-              "Unaccounted",
-              unaccountedCount,
-            ],
-          ].map(([label, value]) => (
-            <article
-              key={label}
-              style={{
-                padding: "18px",
-                border:
-                  "1px solid #D9DDE1",
-                background: "#FFFFFF",
-              }}
-            >
-              <span
-                style={{
-                  display: "block",
-                  marginBottom: "7px",
-                  color: "#73777C",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  letterSpacing: "0.07em",
-                  textTransform:
-                    "uppercase",
-                }}
-              >
-                {label}
-              </span>
-
-              <strong
-                style={{
-                  fontSize: "28px",
-                }}
-              >
-                {value}
-              </strong>
+            { label: "Total duties", value: totalCount, tone: "total" },
+            { label: "Pending", value: pendingCount, tone: "pending" },
+            { label: "Completed", value: completedCount, tone: "completed" },
+            { label: "Covered", value: coveredCount, tone: "covered" },
+            { label: "Unaccounted", value: unaccountedCount, tone: "unaccounted" },
+          ].map((metric) => (
+            <article className={`duty-tracker__metric duty-tracker__metric--${metric.tone}`} key={metric.label}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
             </article>
           ))}
         </section>
 
-        <section
-          style={{
-            marginTop: "24px",
-            display: "flex",
-            justifyContent:
-              "space-between",
-            alignItems: "center",
-            gap: "12px",
-            flexWrap: "wrap",
-          }}
-        >
+        <section className="duty-tracker__list-heading" aria-labelledby="duty-list-title">
           <div>
-            <span
-              style={{
-                display: "block",
-                color: "#1E5AA8",
-                fontSize: "12px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform:
-                  "uppercase",
-              }}
-            >
-              Coverage log
-            </span>
-
-            <h2
-              style={{
-                margin: "5px 0 0",
-                fontSize: "28px",
-              }}
-            >
+            <span className="duty-tracker__section-label">Duty records</span>
+            <h2 id="duty-list-title">{showAll ? "All duties" : "My duties"}</h2>
+            <p>
               {showAll
-                ? "All duties"
-                : "My duties"}
-            </h2>
+                ? "Review the full schedule and update records as needed."
+                : "These are the duties assigned to your account for this date."}
+            </p>
           </div>
-
           {canViewAll && (
             <button
+              className="duty-tracker__view-toggle"
               type="button"
-              onClick={() =>
-                setShowAll(
-                  (current) => !current,
-                )
-              }
-              style={{
-                padding: "10px 14px",
-                border:
-                  "1px solid #D9DDE1",
-                background: "#FFFFFF",
-                color: "#333333",
-                font: "inherit",
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
+              onClick={() => setShowAll((current) => !current)}
+              aria-pressed={showAll}
             >
-              {showAll
-                ? "Show my duties"
-                : "Show all duties"}
+              {showAll ? "Show my duties" : "Show all duties"}
+              <span aria-hidden="true">↗</span>
             </button>
           )}
         </section>
 
         {error && (
-          <div
-            style={{
-              marginTop: "16px",
-              padding: "14px 16px",
-              border:
-                "1px solid #E5BABA",
-              background: "#FCECEC",
-              color: "#8D2929",
-              fontSize: "14px",
-              lineHeight: 1.5,
-            }}
-          >
-            {error}
+          <div className="duty-tracker__error" role="alert">
+            <span aria-hidden="true">!</span>
+            <p>{error}</p>
           </div>
         )}
 
-        <section
-          style={{
-            marginTop: "16px",
-            display: "grid",
-            gap: "12px",
-          }}
-        >
+        <section className="duty-tracker__list" aria-label="Duties for selected date" aria-busy={loading}>
           {loading ? (
-            <div
-              style={{
-                padding: "36px",
-                border:
-                  "1px solid #D9DDE1",
-                background: "#FFFFFF",
-                color: "#73777C",
-                textAlign: "center",
-              }}
-            >
-              Loading duties...
+            <div className="duty-tracker__empty" role="status">
+              <span className="duty-tracker__loading-mark" aria-hidden="true">↻</span>
+              <strong>Loading duties</strong>
+              <span>Getting the latest schedule for this date.</span>
             </div>
           ) : sortedDuties.length === 0 ? (
-            <div
-              style={{
-                padding: "36px",
-                border:
-                  "1px solid #D9DDE1",
-                background: "#FFFFFF",
-                textAlign: "center",
-              }}
-            >
-              <h3
-                style={{
-                  margin: "0 0 8px",
-                }}
-              >
-                No duties scheduled
-              </h3>
-
-              <p
-                style={{
-                  margin: 0,
-                  color: "#73777C",
-                }}
-              >
-                There are no duties recorded
-                for this date.
-              </p>
+            <div className="duty-tracker__empty">
+              <span className="duty-tracker__empty-mark" aria-hidden="true">—</span>
+              <strong>No duties scheduled</strong>
+              <span>There are no duties recorded for {formatDate(selectedDate)}.</span>
             </div>
           ) : (
             sortedDuties.map((duty) => {
-              const statusStyle =
-                getStatusStyle(
-                  duty.status,
-                );
-
-              const isActionRunning =
-                actionId === duty.id;
-
-              const coverCandidates =
-                getCorridorCoverCandidates(
-                  selectedDate,
-                  duty,
-                );
-
-              const selectedCandidate =
-                selectedCoverCandidates[
-                  duty.id
-                ] ?? "";
+              const statusStyle = getStatusStyle(duty.status);
+              const isActionRunning = actionId === duty.id;
+              const coverCandidates = getCorridorCoverCandidates(selectedDate, duty);
+              const selectedCandidate = selectedCoverCandidates[duty.id] ?? "";
 
               return (
-                <article
-                  key={duty.id}
-                  style={{
-                    border:
-                      "1px solid #D9DDE1",
-                    background: "#FFFFFF",
-                    padding: "20px",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "auto 1fr auto",
-                      gap: "18px",
-                      alignItems: "start",
-                    }}
+                <article className="duty-tracker__duty-card" key={duty.id} aria-busy={isActionRunning}>
+                  <label
+                    className={`duty-tracker__completion ${duty.status === "covered" ? "duty-tracker__completion--locked" : ""}`}
+                    title={duty.status === "covered" ? "This duty has been covered." : "Mark duty as completed"}
                   >
-                    <label
-                      style={{
-                        display: "flex",
-                        alignItems:
-                          "center",
-                        justifyContent:
-                          "center",
-                        width: "42px",
-                        height: "42px",
-                        border:
-                          "1px solid #D9DDE1",
-                        cursor:
-                          duty.status ===
-                          "covered"
-                            ? "not-allowed"
-                            : "pointer",
-                      }}
-                      title={
-                        duty.status ===
-                        "covered"
-                          ? "This duty has been covered."
-                          : "Mark duty as completed"
-                      }
-                    >
-                      <input
-                        type="checkbox"
-                        checked={
-                          duty.status ===
-                          "completed"
-                        }
-                        disabled={
-                          isActionRunning ||
-                          duty.status ===
-                            "covered"
-                        }
-                        onChange={(event) =>
-                          void markCompleted(
-                            duty,
-                            event.target
-                              .checked,
-                          )
-                        }
-                        style={{
-                          width: "20px",
-                          height: "20px",
-                          cursor:
-                            "pointer",
-                        }}
-                      />
-                    </label>
+                    <input
+                      type="checkbox"
+                      checked={duty.status === "completed"}
+                      disabled={isActionRunning || duty.status === "covered"}
+                      onChange={(event) => void markCompleted(duty, event.target.checked)}
+                      aria-label={`${duty.status === "completed" ? "Mark incomplete" : "Mark complete"}: ${duty.title}`}
+                    />
+                    <span aria-hidden="true" />
+                  </label>
 
-                    <div>
-                      <div
+                  <div className="duty-tracker__duty-content">
+                    <div className="duty-tracker__duty-title-row">
+                      <h3>{duty.title}</h3>
+                      <span
+                        className={`duty-tracker__status duty-tracker__status--${duty.status}`}
                         style={{
-                          display: "flex",
-                          alignItems:
-                            "center",
-                          gap: "10px",
-                          flexWrap: "wrap",
+                          backgroundColor: statusStyle.background,
+                          borderColor: statusStyle.border,
+                          color: statusStyle.color,
                         }}
                       >
-                        <h3
-                          style={{
-                            margin: 0,
-                            fontSize: "20px",
-                          }}
-                        >
-                          {duty.title}
-                        </h3>
-
-                        <span
-                          style={{
-                            padding:
-                              "5px 9px",
-                            border: `1px solid ${statusStyle.border}`,
-                            background:
-                              statusStyle.background,
-                            color:
-                              statusStyle.color,
-                            fontSize:
-                              "11px",
-                            fontWeight: 700,
-                            letterSpacing:
-                              "0.04em",
-                            textTransform:
-                              "uppercase",
-                          }}
-                        >
-                          {getStatusLabel(
-                            duty.status,
-                          )}
-                        </span>
-                      </div>
-
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: "18px",
-                          flexWrap: "wrap",
-                          marginTop: "10px",
-                          color: "#555A60",
-                          fontSize: "14px",
-                        }}
-                      >
-                        <span>
-                          <strong>
-                            Time:
-                          </strong>{" "}
-                          {formatTime(
-                            duty.start_time,
-                          )}
-                          {duty.end_time
-                            ? ` – ${formatTime(
-                                duty.end_time,
-                              )}`
-                            : ""}
-                        </span>
-
-                        <span>
-                          <strong>
-                            Location:
-                          </strong>{" "}
-                          {duty.location}
-                        </span>
-
-                        <span>
-                          <strong>
-                            Assigned:
-                          </strong>{" "}
-                          {duty.assigned_name ??
-                            duty.assigned_to}
-                        </span>
-                      </div>
-
-                      {duty.notes && (
-                        <p
-                          style={{
-                            margin:
-                              "10px 0 0",
-                            color:
-                              "#73777C",
-                            fontSize:
-                              "14px",
-                          }}
-                        >
-                          {duty.notes}
-                        </p>
-                      )}
-
-                      {canViewAll &&
-                        duty.status ===
-                        "covered" &&
-                        duty.covered_by_name && (
-                          <div
-                            style={{
-                              marginTop:
-                                "14px",
-                              padding:
-                                "12px 14px",
-                              border:
-                                "1px solid #C8D7E9",
-                              background:
-                                "#EEF3FA",
-                              color:
-                                "#24558D",
-                              fontSize:
-                                "14px",
-                            }}
-                          >
-                            <strong>
-                              Covered by:
-                            </strong>{" "}
-                            {
-                              duty.covered_by_name
-                            }
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void clearCover(
-                                  duty,
-                                )
-                              }
-                              disabled={
-                                isActionRunning
-                              }
-                              style={{
-                                marginLeft:
-                                  "12px",
-                                border: 0,
-                                background:
-                                  "transparent",
-                                color:
-                                  "#24558D",
-                                font:
-                                  "inherit",
-                                fontWeight:
-                                  700,
-                                textDecoration:
-                                  "underline",
-                                cursor:
-                                  "pointer",
-                              }}
-                            >
-                              Remove cover
-                            </button>
-                          </div>
-                        )}
-
-                      {duty.status !==
-                        "completed" &&
-                        duty.status !==
-                          "covered" && (
-                          <div
-                            style={{
-                              marginTop:
-                                "14px",
-                              display: "flex",
-                              gap: "8px",
-                              flexWrap:
-                                "wrap",
-                            }}
-                          >
-                            <select
-                              value={
-                                selectedCandidate
-                              }
-                              onChange={(event) =>
-                                setSelectedCoverCandidates(
-                                  (current) => ({
-                                    ...current,
-                                    [duty.id]:
-                                      event.target
-                                        .value,
-                                  }),
-                                )
-                              }
-                              disabled={
-                                isActionRunning ||
-                                coverCandidates.length ===
-                                  0
-                              }
-                              style={{
-                                flex:
-                                  "1 1 240px",
-                                minWidth:
-                                  "220px",
-                                padding:
-                                  "10px 12px",
-                                border:
-                                  "1px solid #C9CDD1",
-                                background:
-                                  "#FFFFFF",
-                                color:
-                                  "#111111",
-                                font:
-                                  "inherit",
-                              }}
-                            >
-                              <option value="">
-                                {coverCandidates.length >
-                                0
-                                  ? "Select cover person"
-                                  : "No cover list available"}
-                              </option>
-
-                              {coverCandidates.map(
-                                (
-                                  candidate,
-                                ) => (
-                                  <option
-                                    key={
-                                      candidate
-                                    }
-                                    value={
-                                      candidate
-                                    }
-                                  >
-                                    {candidate}
-                                  </option>
-                                ),
-                              )}
-                            </select>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void submitCover(
-                                  duty,
-                                )
-                              }
-                              disabled={
-                                isActionRunning ||
-                                !selectedCandidate
-                              }
-                              style={{
-                                padding:
-                                  "10px 14px",
-                                border:
-                                  "1px solid #123B6D",
-                                background:
-                                  "#123B6D",
-                                color:
-                                  "#FFFFFF",
-                                font:
-                                  "inherit",
-                                fontWeight:
-                                  700,
-                                cursor:
-                                  isActionRunning ||
-                                  !selectedCandidate
-                                    ? "not-allowed"
-                                    : "pointer",
-                                opacity:
-                                  isActionRunning ||
-                                  !selectedCandidate
-                                    ? 0.55
-                                    : 1,
-                              }}
-                            >
-                              Record cover
-                            </button>
-
-                            <span
-                              style={{
-                                color:
-                                  "#A0A4A8",
-                                fontSize:
-                                  "12px",
-                                alignSelf:
-                                  "center",
-                              }}
-                            >
-                              {isActionRunning
-                                ? "Saving..."
-                                : ""}
-                            </span>
-                          </div>
-                        )}
+                        {getStatusLabel(duty.status)}
+                      </span>
                     </div>
+
+                    <div className="duty-tracker__metadata">
+                      <span>
+                        <small>Time</small>
+                        <strong>
+                          {formatTime(duty.start_time)}
+                          {duty.end_time ? ` – ${formatTime(duty.end_time)}` : ""}
+                        </strong>
+                      </span>
+                      <span>
+                        <small>Location</small>
+                        <strong>{duty.location}</strong>
+                      </span>
+                      <span>
+                        <small>Assigned to</small>
+                        <strong>{duty.assigned_name ?? duty.assigned_to}</strong>
+                      </span>
+                    </div>
+
+                    {duty.notes && <p className="duty-tracker__notes">{duty.notes}</p>}
+
+                    {canViewAll && duty.status === "covered" && duty.covered_by_name && (
+                      <div className="duty-tracker__cover-record">
+                        <span>
+                          <small>Cover recorded</small>
+                          <strong>{duty.covered_by_name}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void clearCover(duty)}
+                          disabled={isActionRunning}
+                        >
+                          {isActionRunning ? "Removing…" : "Remove cover"}
+                        </button>
+                      </div>
+                    )}
+
+                    {duty.status !== "completed" && duty.status !== "covered" && (
+                      <div className="duty-tracker__cover-actions">
+                        <label className="duty-tracker__cover-select">
+                          <span className="duty-tracker__visually-hidden">Select a cover person for {duty.title}</span>
+                          <select
+                            value={selectedCandidate}
+                            onChange={(event) =>
+                              setSelectedCoverCandidates((current) => ({
+                                ...current,
+                                [duty.id]: event.target.value,
+                              }))
+                            }
+                            disabled={isActionRunning || coverCandidates.length === 0}
+                          >
+                            <option value="">
+                              {coverCandidates.length > 0 ? "Select cover person" : "No cover list available"}
+                            </option>
+                            {coverCandidates.map((candidate) => (
+                              <option key={candidate} value={candidate}>{candidate}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          className="duty-tracker__record-cover"
+                          type="button"
+                          onClick={() => void submitCover(duty)}
+                          disabled={isActionRunning || !selectedCandidate}
+                        >
+                          {isActionRunning ? "Saving…" : "Record cover"}
+                        </button>
+                        {isActionRunning && <span className="duty-tracker__saving" role="status">Saving this duty…</span>}
+                      </div>
+                    )}
                   </div>
                 </article>
               );
@@ -1289,32 +795,15 @@ export default function DutyTrackerPage() {
           )}
         </section>
 
-        <section
-          style={{
-            marginTop: "32px",
-            paddingTop: "22px",
-            borderTop:
-              "1px solid #D9DDE1",
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              color: "#73777C",
-              fontSize: "13px",
-              lineHeight: 1.6,
-            }}
-          >
-            Every duty remains on the record.
-            A completed duty records the assigned
-            person's completion. A covered duty
-            preserves the original assignment and
-            records the person who covered it.
-            Duties that remain incomplete after
-            their scheduled time are flagged as
-            unaccounted.
+        <aside className="duty-tracker__record-note">
+          <span className="duty-tracker__record-note-mark" aria-hidden="true">i</span>
+          <p>
+            Completed duties record the assigned person’s completion. Covered
+            duties keep the original assignment and record who covered it.
+            Duties left incomplete after their scheduled time are marked
+            unaccounted for review.
           </p>
-        </section>
+        </aside>
       </div>
     </main>
   );
