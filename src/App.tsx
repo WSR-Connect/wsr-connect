@@ -10,6 +10,7 @@ import {
 } from "react-router";
 
 import ScrollReveal from "./components/ScrollReveal";
+import HomeAccessSection from "./components/HomeAccessSection";
 import SRCMemberProfileDialog from "./components/SRCMemberProfileDialog";
 import { srcMembers, type SRCMember } from "./data/srcMembers";
 import { supabase } from "./lib/supabase";
@@ -451,6 +452,8 @@ function HomePage() {
           </div>
         </div>
       </section>
+
+      <HomeAccessSection />
 
       {/* --------------------------------------------------
           INTRO

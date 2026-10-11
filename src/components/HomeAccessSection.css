@@ -1,0 +1,229 @@
+.home-access {
+  position: relative;
+  padding: clamp(76px, 9vw, 124px) 0;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 90% 15%, rgba(67, 127, 192, 0.09), transparent 30rem),
+    #f6f8fb;
+}
+
+.home-access__heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 390px);
+  gap: 48px;
+  align-items: end;
+  margin-bottom: 38px;
+}
+
+.home-access__eyebrow,
+.home-access__audience {
+  display: inline-block;
+  color: #2868b2;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.home-access__heading h2 {
+  margin: 16px 0 0;
+  color: #101923;
+  font-size: clamp(42px, 6vw, 76px);
+  font-weight: 680;
+  letter-spacing: -0.075em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.home-access__heading h2 span {
+  color: #2868b2;
+}
+
+.home-access__heading > p {
+  max-width: 390px;
+  margin: 0 0 6px;
+  color: #637184;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.home-access__cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.home-access__card {
+  min-height: 278px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+  padding: clamp(25px, 3.4vw, 42px);
+  border: 1px solid rgba(188, 203, 220, 0.72);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 18px 48px rgba(17, 39, 64, 0.055);
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.home-access__card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(48, 112, 184, 0.35);
+  box-shadow: 0 25px 58px rgba(17, 39, 64, 0.1);
+}
+
+.home-access__card--member {
+  border-color: rgba(23, 70, 116, 0.8);
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(129, 179, 231, 0.18), transparent 22rem),
+    linear-gradient(140deg, #102943, #173f69);
+  box-shadow: 0 20px 54px rgba(16, 41, 67, 0.15);
+  color: #fff;
+}
+
+.home-access__card--member:hover {
+  border-color: rgba(92, 153, 216, 0.9);
+  box-shadow: 0 28px 66px rgba(16, 41, 67, 0.22);
+}
+
+.home-access__card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.home-access__number {
+  color: rgba(32, 70, 112, 0.32);
+  font-size: 27px;
+  font-weight: 750;
+  letter-spacing: -0.07em;
+}
+
+.home-access__card--member .home-access__number {
+  color: rgba(205, 229, 255, 0.45);
+}
+
+.home-access__card--member .home-access__audience {
+  color: #b7d7f6;
+}
+
+.home-access__card h3 {
+  margin: 0;
+  color: #121c29;
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 660;
+  letter-spacing: -0.055em;
+  line-height: 1.12;
+}
+
+.home-access__card--member h3 {
+  color: #fff;
+}
+
+.home-access__card p {
+  max-width: 470px;
+  margin: 12px 0 0;
+  color: #667487;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.home-access__card--member p {
+  color: rgba(236, 244, 253, 0.76);
+}
+
+.home-access__link {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 12px;
+  min-height: 44px;
+  color: #1f5f9f;
+  font-size: 13px;
+  font-weight: 760;
+  text-decoration: none;
+}
+
+.home-access__link span {
+  font-size: 17px;
+  transition: transform 180ms ease;
+}
+
+.home-access__link:hover span {
+  transform: translate(3px, -2px);
+}
+
+.home-access__card--member .home-access__link {
+  color: #d9ebff;
+}
+
+.home-access__link:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid #6da6df;
+  outline-offset: 4px;
+}
+
+@media (max-width: 760px) {
+  .home-access__heading {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 28px;
+  }
+
+  .home-access__heading > p {
+    max-width: 560px;
+  }
+
+  .home-access__cards {
+    grid-template-columns: 1fr;
+  }
+
+  .home-access__card {
+    min-height: 245px;
+    border-radius: 22px;
+  }
+}
+
+@media (max-width: 520px) {
+  .home-access {
+    padding: 72px 0;
+  }
+
+  .home-access__heading h2 {
+    font-size: clamp(40px, 12vw, 56px);
+  }
+
+  .home-access__card {
+    gap: 27px;
+    padding: 25px 22px;
+  }
+
+  .home-access__card-top {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .home-access__audience {
+    font-size: 9px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-access__card,
+  .home-access__link span {
+    transition: none;
+  }
+
+  .home-access__card:hover,
+  .home-access__link:hover span {
+    transform: none;
+  }
+}
+

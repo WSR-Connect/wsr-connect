@@ -148,9 +148,9 @@ export default function LoginPage() {
           </div>
 
           <div className="login-card__heading">
-            <span className="login-card__eyebrow">Member access</span>
+            <span className="login-card__eyebrow">SRC member access</span>
             <h2 id="login-title">Welcome back.</h2>
-            <p>Use the school-issued account shared with you by your SRC leader.</p>
+            <p>Sign in with the individual school account issued to you by your SRC leader.</p>
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
