@@ -208,7 +208,13 @@ function getCorridorCoverCandidates(
       .toLowerCase()
       .includes("corridor");
 
-  if (!isCorridorDuty) {
+  const isGirlsCorridorDuty = duty.title
+    .toLowerCase()
+    .includes("girls corridor duty");
+
+  // The availability data currently belongs only to girls' corridor duties.
+  // Never expose that list on boys' duties; a separate boys' list is needed.
+  if (!isCorridorDuty || !isGirlsCorridorDuty) {
     return [];
   }
 
@@ -686,6 +692,9 @@ export default function DutyTrackerPage() {
               const statusStyle = getStatusStyle(duty.status);
               const isActionRunning = actionId === duty.id;
               const coverCandidates = getCorridorCoverCandidates(selectedDate, duty);
+              const isBoysCorridorDuty = duty.title
+                .toLowerCase()
+                .includes("boys corridor duty");
               const selectedCandidate = selectedCoverCandidates[duty.id] ?? "";
 
               return (
@@ -770,7 +779,11 @@ export default function DutyTrackerPage() {
                             disabled={isActionRunning || coverCandidates.length === 0}
                           >
                             <option value="">
-                              {coverCandidates.length > 0 ? "Select cover person" : "No cover list available"}
+                              {coverCandidates.length > 0
+                                ? "Select cover person"
+                                : isBoysCorridorDuty
+                                  ? "Boys-only cover list not configured"
+                                  : "No cover list available"}
                             </option>
                             {coverCandidates.map((candidate) => (
                               <option key={candidate} value={candidate}>{candidate}</option>

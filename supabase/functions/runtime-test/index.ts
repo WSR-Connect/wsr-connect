@@ -1458,6 +1458,50 @@ Deno.serve(
           }
 
           if (
+            duty.duty_name
+              .toLocaleLowerCase()
+              .startsWith("boys corridor duty")
+          ) {
+            const {
+              data: boysRotaRows,
+              error: boysRotaError,
+            } = await supabase
+              .from("duty_rotas")
+              .select("assigned_name")
+              .eq("active", true)
+              .like("duty_name", "Boys corridor duty - Lesson%");
+
+            if (boysRotaError) {
+              throw new Error(
+                `Failed to validate the boys’ corridor cover list: ${boysRotaError.message}`,
+              );
+            }
+
+            const normalizedCoverName = coveredBy
+              .trim()
+              .replace(/\s+/g, " ")
+              .toLocaleLowerCase();
+            const isOnBoysCorridorRota = (boysRotaRows ?? []).some(
+              (row) =>
+                typeof row.assigned_name === "string" &&
+                row.assigned_name
+                  .trim()
+                  .replace(/\s+/g, " ")
+                  .toLocaleLowerCase() === normalizedCoverName,
+            );
+
+            if (!isOnBoysCorridorRota) {
+              return jsonResponse(
+                {
+                  error:
+                    "Only a student on the boys’ corridor rota can cover a boys’ corridor duty. Girls’ corridor covers cannot be used here.",
+                },
+                400,
+              );
+            }
+          }
+
+          if (
             duty.assigned_to !==
               authorization.uid &&
             !authorization.isLeadership
