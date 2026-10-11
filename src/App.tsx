@@ -13,6 +13,7 @@ import ScrollReveal from "./components/ScrollReveal";
 import HomeAccessSection from "./components/HomeAccessSection";
 import SRCMemberProfileDialog from "./components/SRCMemberProfileDialog";
 import { srcMembers, type SRCMember } from "./data/srcMembers";
+import { usePublicAnnouncements } from "./hooks/usePublicAnnouncements";
 import { supabase } from "./lib/supabase";
 import DutiesPage from "./DutiesPage";
 
@@ -29,6 +30,40 @@ import DutyRotaManagerPage from "./portal/DutyRotaManagerPage";
 import FeedbackInboxPage from "./portal/FeedbackInboxPage";
 
 import "./App.css";
+
+function formatPublicAnnouncementDate(
+  publishedAt: string | null,
+) {
+  if (!publishedAt) {
+    return "Recently published";
+  }
+
+  const date = new Date(publishedAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Recently published";
+  }
+
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Dubai",
+  });
+}
+
+function getAnnouncementExcerpt(
+  content: string,
+  maxLength = 180,
+) {
+  const text = content.replace(/\s+/g, " ").trim();
+
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength).trimEnd()}…`;
+}
 
 const srcCategories = [
   "House & Sports Leadership",
@@ -335,6 +370,14 @@ function PageHero({
    ========================================================= */
 
 function HomePage() {
+  const {
+    announcements,
+    loading: announcementsLoading,
+    error: announcementsError,
+  } = usePublicAnnouncements(4);
+  const featuredAnnouncement = announcements[0];
+  const supportingAnnouncements = announcements.slice(1, 4);
+
   return (
     <main className="home-page">
       {/* --------------------------------------------------
@@ -569,106 +612,104 @@ function HomePage() {
 
                 <div className="feature-story-content">
                   <span className="story-tag">
-                    FEATURED
+                    {featuredAnnouncement
+                      ? featuredAnnouncement.pinned
+                        ? "PINNED ANNOUNCEMENT"
+                        : "LATEST ANNOUNCEMENT"
+                      : "PUBLIC UPDATES"}
                   </span>
 
                   <h3>
-                    Stay connected to
-                    <br />
-                    what's happening.
+                    {featuredAnnouncement?.title ??
+                      (announcementsLoading
+                        ? "Loading school updates..."
+                        : announcementsError
+                          ? "Updates are temporarily unavailable."
+                          : "No public announcements yet.")}
                   </h3>
 
                   <p>
-                    Important updates, school
-                    news and opportunities in one
-                    place.
+                    {featuredAnnouncement
+                      ? getAnnouncementExcerpt(
+                          featuredAnnouncement.content,
+                        )
+                      : announcementsError
+                        ? "Please check the announcements page again shortly."
+                        : "Published school news and student leadership updates will appear here."}
                   </p>
 
                   <span className="story-arrow">
-                    Explore announcements ↗
+                    {featuredAnnouncement
+                      ? "Read the announcement ↗"
+                      : "View announcements ↗"}
                   </span>
                 </div>
               </NavLink>
             </ScrollReveal>
 
             <div className="story-stack">
-              <ScrollReveal delay={180}>
-                <NavLink
-                  to="/announcements"
-                  className="story-item"
-                >
-                  <span className="story-number">
-                    01
-                  </span>
+              {supportingAnnouncements.length > 0 ? (
+                supportingAnnouncements.map(
+                  (announcement, index) => (
+                    <ScrollReveal
+                      key={announcement.id}
+                      delay={180 + index * 60}
+                    >
+                      <NavLink
+                        to="/announcements"
+                        className="story-item"
+                      >
+                        <span className="story-number">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
 
-                  <div>
-                    <span className="story-meta">
-                      LATEST UPDATE
+                        <div>
+                          <span className="story-meta">
+                            {announcement.pinned
+                              ? "PINNED UPDATE"
+                              : formatPublicAnnouncementDate(
+                                  announcement.published_at,
+                                )}
+                          </span>
+
+                          <h3>{announcement.title}</h3>
+                        </div>
+
+                        <span className="story-arrow-small">
+                          ↗
+                        </span>
+                      </NavLink>
+                    </ScrollReveal>
+                  ),
+                )
+              ) : (
+                <ScrollReveal delay={180}>
+                  <NavLink
+                    to="/announcements"
+                    className="story-item story-item-empty"
+                  >
+                    <span className="story-number">—</span>
+
+                    <div>
+                      <span className="story-meta">
+                        WSR CONNECT
+                      </span>
+
+                      <h3>
+                        {announcementsLoading
+                          ? "Loading recent updates..."
+                          : announcementsError
+                            ? "Check back for the latest updates."
+                            : "More updates will appear here."}
+                      </h3>
+                    </div>
+
+                    <span className="story-arrow-small">
+                      ↗
                     </span>
-
-                    <h3>
-                      Important school
-                      information
-                    </h3>
-                  </div>
-
-                  <span className="story-arrow-small">
-                    ↗
-                  </span>
-                </NavLink>
-              </ScrollReveal>
-
-              <ScrollReveal delay={240}>
-                <NavLink
-                  to="/announcements"
-                  className="story-item"
-                >
-                  <span className="story-number">
-                    02
-                  </span>
-
-                  <div>
-                    <span className="story-meta">
-                      COMMUNITY
-                    </span>
-
-                    <h3>
-                      What's happening
-                      around WSR
-                    </h3>
-                  </div>
-
-                  <span className="story-arrow-small">
-                    ↗
-                  </span>
-                </NavLink>
-              </ScrollReveal>
-
-              <ScrollReveal delay={300}>
-                <NavLink
-                  to="/announcements"
-                  className="story-item"
-                >
-                  <span className="story-number">
-                    03
-                  </span>
-
-                  <div>
-                    <span className="story-meta">
-                      OPPORTUNITY
-                    </span>
-
-                    <h3>
-                      Get involved
-                      with school life
-                    </h3>
-                  </div>
-
-                  <span className="story-arrow-small">
-                    ↗
-                  </span>
-                </NavLink>
-              </ScrollReveal>
+                  </NavLink>
+                </ScrollReveal>
+              )}
             </div>
           </div>
         </div>
@@ -960,37 +1001,84 @@ function HomePage() {
    ========================================================= */
 
 function AnnouncementsPage() {
+  const {
+    announcements,
+    loading,
+    error,
+    reload,
+  } = usePublicAnnouncements(50);
+
   return (
     <>
       <PageHero
         eyebrow="WSR CONNECT"
         title="Announcements"
-        description="Stay up to date with school news, student leadership updates, community notices and important information."
+        description="The latest published school news, student leadership updates and community notices."
       />
 
-      <section className="section">
-        <div className="announcement-page-grid">
-          <article className="announcement-card">
-            <div className="announcement-top">
-              <span>WSR CONNECT</span>
-              <span>—</span>
-            </div>
-
-            <h3>
-              No announcements published yet.
-            </h3>
-
-            <p>
-              Official school and student leadership
-              announcements will appear here when they
-              are published.
-            </p>
-
-            <span className="card-link">
-              WSR Announcements
+      <section
+        className="section public-announcements-section"
+        aria-live="polite"
+        aria-busy={loading}
+      >
+        {loading ? (
+          <div className="public-announcement-state" role="status">
+            Loading published announcements...
+          </div>
+        ) : error ? (
+          <div className="public-announcement-state" role="alert">
+            <h2>Announcements could not be loaded.</h2>
+            <p>Please try again in a moment.</p>
+            <button
+              type="button"
+              className="public-announcement-retry"
+              onClick={reload}
+            >
+              Try again
+            </button>
+          </div>
+        ) : announcements.length === 0 ? (
+          <div className="public-announcement-state">
+            <span className="public-announcement-state__eyebrow">
+              WSR CONNECT
             </span>
-          </article>
-        </div>
+            <h2>No public announcements yet.</h2>
+            <p>
+              Official school and student leadership updates will appear
+              here when they are published.
+            </p>
+          </div>
+        ) : (
+          <div className="public-announcement-grid">
+            {announcements.map((announcement) => (
+              <article
+                className="public-announcement-card"
+                key={announcement.id}
+              >
+                <div className="public-announcement-card__meta">
+                  <span>
+                    {announcement.pinned
+                      ? "PINNED UPDATE"
+                      : "WSR CONNECT"}
+                  </span>
+                  <time
+                    dateTime={
+                      announcement.published_at ?? undefined
+                    }
+                  >
+                    {formatPublicAnnouncementDate(
+                      announcement.published_at,
+                    )}
+                  </time>
+                </div>
+
+                <h2>{announcement.title}</h2>
+
+                <p>{announcement.content}</p>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </>
   );

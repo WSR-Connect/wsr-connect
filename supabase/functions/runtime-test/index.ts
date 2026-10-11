@@ -1040,6 +1040,86 @@ Deno.serve(
     }
 
     try {
+      const url =
+        new URL(req.url);
+
+      const resource =
+        url.searchParams.get(
+          "resource",
+        );
+
+      if (
+        resource ===
+          "public-announcements"
+      ) {
+        if (req.method !== "GET") {
+          return jsonResponse(
+            {
+              error:
+                "Public announcements are read-only.",
+            },
+            405,
+          );
+        }
+
+        const now =
+          new Date().toISOString();
+        const requestedLimit =
+          Number.parseInt(
+            url.searchParams.get("limit") ?? "30",
+            10,
+          );
+        const limit =
+          Number.isFinite(requestedLimit)
+            ? Math.min(
+                Math.max(requestedLimit, 1),
+                50,
+              )
+            : 30;
+
+        const {
+          data: announcements,
+          error,
+        } = await supabase
+          .from("announcements")
+          .select(
+            "id, title, content, pinned, published_at",
+          )
+          .eq("status", "published")
+          .eq("visibility", "public")
+          .or(
+            `published_at.is.null,published_at.lte.${now}`,
+          )
+          .or(
+            `expires_at.is.null,expires_at.gt.${now}`,
+          )
+          .order("pinned", {
+            ascending: false,
+          })
+          .order("published_at", {
+            ascending: false,
+            nullsFirst: false,
+          })
+          .order("created_at", {
+            ascending: false,
+          })
+          .limit(limit);
+
+        if (error) {
+          throw new Error(
+            `Failed to load public announcements: ${error.message}`,
+          );
+        }
+
+        return jsonResponse({
+          ok: true,
+          resource:
+            "public-announcements",
+          announcements:
+            announcements ?? [],
+        });
+      }
+
       const authHeader =
         req.headers.get(
           "Authorization",
@@ -1064,14 +1144,6 @@ Deno.serve(
         authHeader
           .slice("Bearer ".length)
           .trim();
-
-      const url =
-        new URL(req.url);
-
-      const resource =
-        url.searchParams.get(
-          "resource",
-        );
 
       /*
        * ============================================================
